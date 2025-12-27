@@ -2,16 +2,13 @@ import Navigation from "@/components/navigation";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navigation />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main className="flex-1 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-4xl font-bold text-foreground mb-4">
             Welcome to Fire Home Course
           </h1>
-          <p className="text-lg text-muted-foreground">
-            Your logistics tracking solution
-          </p>
         </div>
       </main>
     </div>
