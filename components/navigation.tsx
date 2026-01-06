@@ -3,8 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth";
-import { Sun, Moon } from "lucide-react";
+import { Sun, Moon, Flame } from "lucide-react";
 import { useEffect, useState } from "react";
+
+
+
 
 export default function Navigation() {
   const authContext = useAuth();
@@ -65,9 +68,10 @@ export default function Navigation() {
   return (
     <nav className="bg-green-800 text-white p-4">
       <div className="w-full flex items-center justify-between px-4">
-        <Link href="/" className="text-xl font-semibold">
+      <Link href="/" className="text-2xl font-semibold flex items-center gap-2 font-poppins">
+        <Flame className="w-5 h-5" />
           Fire Home
-        </Link>
+      </Link>
         
         <div className="flex items-center gap-4">
           {/* Dark/Light Mode Toggle */}
@@ -97,15 +101,27 @@ export default function Navigation() {
               </button>
             </>
           ) : (
-            <>
+            <ul className="flex items-center gap-4">
+            <li>
+              <Link href="/property-stock-search" className="text-sm hover:underline">
+                Property stock search
+              </Link>
+            </li>
+            <div className="text-sm">|</div>
+            <li>
               <Link href="/login" className="text-sm hover:underline">
                 Login
               </Link>
+            </li>
+            <li>
               <span className="text-sm">|</span>
+            </li>
+            <li>
               <Link href="/register" className="text-sm hover:underline">
                 Register
               </Link>
-            </>
+            </li>
+          </ul>
           )}
         </div>
       </div>
