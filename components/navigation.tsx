@@ -3,8 +3,17 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth";
-import { Sun, Moon, Flame } from "lucide-react";
+import { Sun, Moon, Flame, User, LayoutDashboard, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 
 
@@ -88,18 +97,53 @@ export default function Navigation() {
           </button>
 
           {currentUser ? (
-            <>
-              <span className="text-sm">
-                Hi, {currentUser.displayName || currentUser.email}
-              </span>
-              <p> | </p>
-              <button
-                onClick={handleLogout}
-                className="text-sm hover:underline"
-              >
-                Logout
-              </button>
-            </>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer">
+                  <Avatar className="w-8 h-8">
+                    <AvatarImage 
+                      src={currentUser.photoURL || undefined} 
+                      alt={currentUser.displayName || currentUser.email || "User"} 
+                    />
+                    <AvatarFallback className="bg-white/20 text-white text-xs">
+                      {currentUser.displayName 
+                        ? currentUser.displayName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
+                        : currentUser.email?.[0].toUpperCase() || "U"
+                      }
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm">
+                    Hi, {currentUser.displayName || currentUser.email}
+                  </span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  {currentUser.displayName || currentUser.email}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/my-account" className="flex items-center cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>My Account</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/admin/dashboard" className="flex items-center cursor-pointer">
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    <span>Admin Dashboard</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={handleLogout}
+                  className="flex items-center cursor-pointer text-red-600 focus:text-red-600"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Logout</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
             <ul className="flex items-center gap-4">
             <li>

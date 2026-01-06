@@ -14,6 +14,9 @@ export default function ContinueWithGoogleButton() {
     try {
       setLoading(true);
       const provider = new GoogleAuthProvider();
+      
+      // Use popup instead of redirect for better UX
+      // Popup will be centered by browser automatically
       const result = await signInWithPopup(auth, provider);
       
       // User signed in successfully
