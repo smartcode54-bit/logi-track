@@ -5,7 +5,7 @@ import { User, signOut } from "firebase/auth";
 import { auth } from "@/firebase/client";
 import { onAuthStateChanged } from "firebase/auth";
 import { getIdTokenResult, getIdToken } from "firebase/auth";
-import { setToken, removeToken } from "./action";
+import { setToken, removeToken, rotateToken } from "./action";
 
 type ParsedTokenResult = {
   [key: string]: any;
@@ -47,6 +47,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             await getIdToken(user, true);
             const updatedTokenResult = await getIdTokenResult(user);
             setCustomClaims(updatedTokenResult.claims ?? null);
+            
+            // Update cookie with new token (token rotation)
+            if (updatedTokenResult.token) {
+                await rotateToken(updatedTokenResult.token);
+            }
           }
         } catch (error) {
           console.error("Error getting token:", error);

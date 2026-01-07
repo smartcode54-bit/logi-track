@@ -1132,6 +1132,29 @@ export const removeToken = async () => {
     cookieStore.delete("firebase_refresh_token");
 };
 
+// Rotate tokens: Refresh ID token using refresh token
+export const rotateToken = async (newIdToken: string) => {
+    try {
+        const verifiedToken = await auth.verifyIdToken(newIdToken);
+        if (!verifiedToken) {
+            return;
+        }
+        
+        const cookieStore = await cookies();
+        // Update ID token with new one (keep same expiration)
+        cookieStore.set("firebase_token", newIdToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            path: "/",
+            maxAge: 60 * 60, // 1 hour
+        });
+    } catch (error) {
+        console.error("Error refreshing token:", error);
+        throw error;
+    }
+};
+
 // Set tokens in cookies and assign admin role if needed
 export const setToken = async ({
     token,
@@ -1159,19 +1182,25 @@ export const setToken = async ({
             });
         }
         
-        // Store tokens in cookies
+        // Store tokens in cookies with proper expiration and security settings
         const cookieStore = await cookies();
+        
+        // ID Token: Short-lived (1 hour) - Firebase ID tokens expire in ~1 hour
         cookieStore.set("firebase_token", token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: "lax",
             path: "/",
+            maxAge: 60 * 60, // 1 hour (3600 seconds)
         });
+        
+        // Refresh Token: Long-lived (30 days) - More secure with strict SameSite
         cookieStore.set("firebase_refresh_token", refreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
+            sameSite: "strict", // More secure for refresh tokens
             path: "/",
+            maxAge: 60 * 60 * 24 * 30, // 30 days (2592000 seconds)
         });
     } catch (error) {
         console.error(error);
@@ -1187,6 +1216,9 @@ export const setToken = async ({
 - ✅ ตั้งค่า admin role ด้วย `auth.setCustomUserClaims()`
 - ✅ เก็บ tokens ใน HTTP-only cookies เพื่อความปลอดภัย
 - ✅ ใช้ `secure: true` ใน production environment
+- ✅ **Expiration Management**: ID token มีอายุ 1 ชั่วโมง, Refresh token มีอายุ 30 วัน
+- ✅ **Separate Security Settings**: Refresh token ใช้ `sameSite: "strict"` เพื่อความปลอดภัยสูงขึ้น
+- ✅ **Token Rotation**: ฟังก์ชัน `rotateToken()` สำหรับอัปเดต ID token เมื่อ refresh
 
 ### Step 11.3: Update Auth Context
 
@@ -1201,8 +1233,8 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { User, signOut } from "firebase/auth";
 import { auth } from "@/firebase/client";
 import { onAuthStateChanged } from "firebase/auth";
-import { getIdTokenResult } from "firebase/auth";
-import { setToken, removeToken } from "./action";
+import { getIdTokenResult, getIdToken } from "firebase/auth";
+import { setToken, removeToken, rotateToken } from "./action";
 
 type ParsedTokenResult = {
   [key: string]: any;
@@ -1235,6 +1267,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               token, 
               refreshToken 
             });
+            
+            // Force refresh token to get updated claims (especially if admin role was just set)
+            await getIdToken(user, true);
+            const updatedTokenResult = await getIdTokenResult(user);
+            setCustomClaims(updatedTokenResult.claims ?? null);
+            
+            // Update cookie with new token (token rotation)
+            if (updatedTokenResult.token) {
+                await rotateToken(updatedTokenResult.token);
+            }
           }
         } catch (error) {
           console.error("Error getting token:", error);
@@ -1271,6 +1313,8 @@ export const useAuth = () => useContext(AuthContext);
 - ✅ ใช้ `getIdTokenResult()` เพื่อดึง token และ claims
 - ✅ เก็บ custom claims ใน state
 - ✅ ส่ง tokens ไปยัง server action (`setToken`)
+- ✅ Force refresh token เพื่อให้ได้ claims ล่าสุด (เมื่อ admin role ถูกตั้งค่า)
+- ✅ ใช้ `rotateToken()` เพื่ออัปเดต cookie เมื่อ token ถูก refresh
 - ✅ ลบ tokens เมื่อ user logout
 
 ### Step 11.4: Environment Variables Setup
@@ -1313,10 +1357,16 @@ FIREBASE_CLIENT_ID=your_client_id
 7. Server: Set Admin Custom Claim (if email matches)
    ↓
 8. Server: Save Tokens in HTTP-only Cookies
+   - ID Token: 1 hour expiration, sameSite: "lax"
+   - Refresh Token: 30 days expiration, sameSite: "strict"
    ↓
-9. Client: Store Claims in State
+9. Client: Force Refresh Token (to get updated claims)
    ↓
-10. Components can check admin role from claims
+10. Client: Rotate Token (update cookie with new token)
+   ↓
+11. Client: Store Claims in State
+   ↓
+12. Components can check admin role from claims
 ```
 
 **Benefits:**
@@ -1324,8 +1374,45 @@ FIREBASE_CLIENT_ID=your_client_id
 - 🚀 **Server-side Auth**: Server components can access tokens from cookies
 - ⚡ **Automatic**: Admin role assigned automatically based on email
 - 🔄 **Real-time**: Claims updated when admin role is set
+- ⏰ **Expiration Management**: Tokens expire automatically (ID token: 1 hour, Refresh token: 30 days)
+- 🔐 **Enhanced Security**: Refresh token uses `sameSite: "strict"` for better CSRF protection
+- 🔄 **Token Rotation**: Automatic token refresh and cookie update
 
-### Step 11.6: Using Admin Role in Components
+### Step 11.6: Token Storage Best Practices
+
+**Cookie Security Settings:**
+
+| Setting | ID Token | Refresh Token | Reason |
+|---------|----------|---------------|--------|
+| `httpOnly` | ✅ true | ✅ true | ป้องกัน XSS attacks |
+| `secure` | ✅ production | ✅ production | ส่งผ่าน HTTPS เท่านั้น |
+| `sameSite` | `lax` | `strict` | Refresh token ต้องการความปลอดภัยสูงกว่า |
+| `maxAge` | 1 hour | 30 days | ID token สั้น, Refresh token ยาว |
+| `path` | `/` | `/` | ใช้ได้ทั้งแอป |
+
+**Token Rotation:**
+
+- ✅ **Automatic Refresh**: เมื่อ ID token หมดอายุ ระบบจะ refresh อัตโนมัติ
+- ✅ **Cookie Update**: ใช้ `rotateToken()` เพื่ออัปเดต cookie เมื่อได้ token ใหม่
+- ✅ **Security**: Token ถูก verify ก่อนอัปเดต cookie
+
+**Why These Settings?**
+
+1. **ID Token (1 hour, sameSite: "lax")**:
+   - อายุสั้นเพื่อลดความเสี่ยงหากถูกขโมย
+   - `sameSite: "lax"` อนุญาตการนำทางปกติ (เช่น จาก external link)
+
+2. **Refresh Token (30 days, sameSite: "strict")**:
+   - อายุยาวเพื่อความสะดวกของผู้ใช้
+   - `sameSite: "strict"` ป้องกัน CSRF attacks อย่างเข้มงวด
+   - ใช้เฉพาะเมื่อ refresh ID token
+
+3. **Token Rotation**:
+   - ลดความเสี่ยงจากการใช้ token เดิมซ้ำ
+   - อัปเดต cookie อัตโนมัติเมื่อ token ถูก refresh
+   - ตรวจสอบ token ก่อนอัปเดต
+
+### Step 11.7: Using Admin Role in Components
 
 **Example: Check Admin Role in Component**
 
