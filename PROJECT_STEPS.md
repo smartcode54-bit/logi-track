@@ -12,6 +12,7 @@
 9. [My Account Page](#9-my-account-page)
 10. [Admin Dashboard Page](#10-admin-dashboard-page)
 11. [Admin Role Management & Cookie Token Storage](#11-admin-role-management--cookie-token-storage)
+12. [Route Protection with Next.js Middleware](#12-route-protection-with-nextjs-middleware)
 
 ---
 
@@ -1452,20 +1453,240 @@ export default function AdminComponent() {
 
 ---
 
+## 12. Route Protection with Next.js Middleware
+
+### Step 12.1: Create Middleware for Route Protection
+
+**File:** `middleware.ts` (root directory)
+
+สร้าง Next.js middleware เพื่อป้องกัน routes และตรวจสอบ authentication ก่อนเข้าถึงหน้า:
+
+```typescript
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+
+// Type declaration for atob (available in Edge runtime)
+declare const atob: (str: string) => string;
+
+// Public routes that don't require authentication
+const publicRoutes = ["/login", "/register", "/forgot-password"];
+
+// Protected routes that require authentication
+const protectedRoutes = ["/my-account", "/admin"];
+
+// Admin-only routes
+const adminRoutes = ["/admin"];
+
+// Helper function to decode base64url (Edge runtime compatible)
+function base64UrlDecode(str: string): string {
+  // Convert base64url to base64
+  let base64 = str.replace(/-/g, "+").replace(/_/g, "/");
+  
+  // Add padding if needed
+  while (base64.length % 4) {
+    base64 += "=";
+  }
+  
+  // Decode using atob (available in Edge runtime)
+  try {
+    return atob(base64);
+  } catch (error) {
+    throw new Error("Failed to decode base64");
+  }
+}
+
+// Helper function to decode JWT token (basic decoding without verification)
+// Note: Full verification happens server-side, this is just for routing decisions
+function decodeToken(token: string): { claims?: any; error?: string } {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) {
+      return { error: "Invalid token format" };
+    }
+
+    const payload = parts[1];
+    const decodedPayload = base64UrlDecode(payload);
+    const decoded = JSON.parse(decodedPayload);
+
+    return { claims: decoded };
+  } catch (error) {
+    return { error: "Failed to decode token" };
+  }
+}
+
+// Helper function to check if token is expired
+function isTokenExpired(claims: any): boolean {
+  if (!claims.exp) return true;
+  const expirationTime = claims.exp * 1000; // Convert to milliseconds
+  return Date.now() >= expirationTime;
+}
+
+// Helper function to check if user is admin
+function isAdmin(claims: any): boolean {
+  return claims?.admin === true || claims?.role === "admin";
+}
+
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const token = request.cookies.get("firebase_token")?.value;
+
+  // Check if the current path is a public route
+  const isPublicRoute = publicRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
+
+  // Check if the current path is a protected route
+  const isProtectedRoute = protectedRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
+
+  // Check if the current path is an admin route
+  const isAdminRoute = adminRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
+
+  // If user is on a public route and has a valid token, redirect to home
+  if (isPublicRoute && token) {
+    try {
+      const { claims, error } = decodeToken(token);
+      if (!error && claims && !isTokenExpired(claims)) {
+        // User is authenticated, redirect away from auth pages
+        return NextResponse.redirect(new URL("/", request.url));
+      }
+    } catch (error) {
+      // If token is invalid, allow access to public routes
+    }
+  }
+
+  // If user is on a protected route without a token, redirect to login
+  if (isProtectedRoute && !token) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // If user has a token, verify it's valid
+  if (isProtectedRoute && token) {
+    try {
+      const { claims, error } = decodeToken(token);
+
+      // If token is invalid or expired, redirect to login
+      if (error || !claims || isTokenExpired(claims)) {
+        const loginUrl = new URL("/login", request.url);
+        loginUrl.searchParams.set("redirect", pathname);
+        return NextResponse.redirect(loginUrl);
+      }
+
+      // If accessing admin route, check admin status
+      if (isAdminRoute && !isAdmin(claims)) {
+        // User is authenticated but not admin, redirect to home
+        return NextResponse.redirect(new URL("/", request.url));
+      }
+    } catch (error) {
+      // If token decoding fails, redirect to login
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  // Allow the request to proceed
+  return NextResponse.next();
+}
+
+// Configure which routes the middleware should run on
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public files (public folder)
+     */
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
+};
+```
+
+**Key Points:**
+- ✅ **Edge Runtime Compatible** - ใช้ `atob` แทน `Buffer` เพื่อให้ทำงานใน Edge runtime
+- ✅ **Token Decoding** - Decode JWT token เพื่อตรวจสอบ expiration และ admin claims
+- ✅ **Route Protection** - ป้องกัน routes ที่ต้องการ authentication
+- ✅ **Admin Route Protection** - ตรวจสอบ admin role สำหรับ `/admin/*` routes
+- ✅ **Public Route Handling** - Redirect authenticated users ออกจาก auth pages
+- ✅ **Redirect Handling** - ส่ง `redirect` query parameter เพื่อกลับไปหน้าที่ต้องการหลังจาก login
+
+### Step 12.2: Route Protection Behavior
+
+**Protected Routes:**
+- `/admin/*` → ต้องมี authentication + admin role
+- `/my-account` → ต้องมี authentication
+
+**Public Routes:**
+- `/login`, `/register`, `/forgot-password` → Redirect ไปหน้า home ถ้า authenticated แล้ว
+
+**Redirect Flow:**
+1. Unauthenticated user พยายามเข้าถึง protected route
+2. Middleware redirect ไป `/login?redirect=/protected-route`
+3. หลังจาก login สำเร็จ, redirect กลับไปหน้าที่ต้องการ
+
+### Step 12.3: How Middleware Works
+
+**Middleware Execution Flow:**
+
+```
+1. Request comes in
+   ↓
+2. Check if route is public/protected/admin
+   ↓
+3. Check for firebase_token cookie
+   ↓
+4. If protected route without token → Redirect to /login
+   ↓
+5. If protected route with token → Decode and verify token
+   ↓
+6. If admin route → Check admin claim
+   ↓
+7. If token expired/invalid → Redirect to /login
+   ↓
+8. If authenticated on public route → Redirect to home
+   ↓
+9. Allow request to proceed
+```
+
+**Token Verification:**
+- Middleware ทำ **basic token decoding** เพื่อตรวจสอบ expiration และ claims
+- **Full token verification** ยังคงทำที่ server-side ผ่าน Firebase Admin SDK
+- Middleware ใช้สำหรับ routing decisions เท่านั้น
+
+**Benefits:**
+- ✅ **Server-side Protection** - ป้องกัน routes ก่อนที่ request จะถึง page component
+- ✅ **Better UX** - Redirect ทันทีโดยไม่ต้องรอ client-side check
+- ✅ **Security** - ตรวจสอบ token ก่อนเข้าถึง protected routes
+- ✅ **Edge Runtime** - ทำงานที่ Edge สำหรับ performance ที่ดี
+
+---
+
 ## 🚀 Next Steps
 
 1. **Role-based Access Control** - ✅ Completed - Admin role management implemented
-2. **Firestore Integration** - ดึงข้อมูล stats จาก Firestore แทน mock data
-3. **User Management** - สร้างหน้า Manage Users
-4. **Driver Management** - สร้างหน้า Manage Drivers
-5. **Package Management** - สร้างหน้า Manage Packages
-6. **Edit Profile** - เพิ่มฟังก์ชันแก้ไขข้อมูลผู้ใช้ในหน้า My Account
+2. **Route Protection** - ✅ Completed - Next.js middleware for route protection
+3. **Firestore Integration** - ดึงข้อมูล stats จาก Firestore แทน mock data
+4. **User Management** - สร้างหน้า Manage Users
+5. **Driver Management** - สร้างหน้า Manage Drivers
+6. **Package Management** - สร้างหน้า Manage Packages
+7. **Edit Profile** - เพิ่มฟังก์ชันแก้ไขข้อมูลผู้ใช้ในหน้า My Account
 
 ---
 
 **Last Updated:** 2025-01-27
 
 **Recent Updates:**
+- ✅ Added route protection with Next.js middleware
+- ✅ Implemented server-side route protection for protected and admin routes
+- ✅ Added automatic redirect handling for authenticated/unauthenticated users
 - ✅ Added admin role management with automatic assignment based on email
 - ✅ Implemented secure cookie-based token storage for server-side authentication
 - ✅ Added server actions for token management (`setToken`, `removeToken`)
