@@ -9,7 +9,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import Link from "next/link";
-import { LayoutDashboard, Users, Package, Truck, BarChart3, Home, ChevronRight, Building2 } from "lucide-react";
+import { LayoutDashboard, Users, Package, Truck, BarChart3, Home, ChevronRight } from "lucide-react";
 
 export default function AdminDashboardPage() {
   // Mock data - replace with real data from Firestore
@@ -55,12 +55,12 @@ export default function AdminDashboardPage() {
       statLabel: "active",
     },
     {
-      icon: Building2,
-      title: "Properties",
-      description: "View and manage properties",
-      href: "/admin/properties",
+      icon: Truck,
+      title: "Trucks",
+      description: "View and manage truck fleet",
+      href: "/admin/trucks",
       stat: stats.totalPackages,
-      statLabel: "properties",
+      statLabel: "trucks",
     }
   ];
 

@@ -16,9 +16,9 @@ const sidebarItems = [
         icon: LayoutDashboard,
     },
     {
-        title: "Properties",
-        href: "/admin/properties",
-        icon: Building2,
+        title: "Trucks",
+        href: "/admin/trucks",
+        icon: Truck,
     },
     {
         title: "Users",
