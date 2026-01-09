@@ -11,7 +11,11 @@ import {
 import Link from "next/link";
 import { LayoutDashboard, Users, Package, Truck, BarChart3, Home, ChevronRight } from "lucide-react";
 
+import { useLanguage } from "@/context/language";
+
 export default function AdminDashboardPage() {
+  const { t } = useLanguage();
+
   // Mock data - replace with real data from Firestore
   const stats = {
     totalUsers: 0,
@@ -24,43 +28,43 @@ export default function AdminDashboardPage() {
   const navItems = [
     {
       icon: Users,
-      title: "Manage Users",
-      description: "View and manage user accounts",
+      title: t("dashboard.manageUsers"),
+      description: t("dashboard.manageUsersDesc"),
       href: "/admin/users",
       stat: stats.totalUsers,
       statLabel: "users",
     },
     {
       icon: Truck,
-      title: "Manage Drivers",
-      description: "View and manage driver accounts",
+      title: t("dashboard.manageDrivers"),
+      description: t("dashboard.manageDriversDesc"),
       href: "/admin/drivers",
       stat: stats.totalDrivers,
       statLabel: "drivers",
     },
     {
       icon: Package,
-      title: "Manage Packages",
-      description: "View and manage package deliveries",
+      title: t("dashboard.managePackages"),
+      description: t("dashboard.managePackagesDesc"),
       href: "/admin/packages",
       stat: stats.totalPackages,
       statLabel: "packages",
     },
     {
+      icon: Truck,
+      title: t("dashboard.manageTrucks"),
+      description: t("dashboard.manageTrucksDesc"),
+      href: "/admin/trucks",
+      stat: stats.totalPackages,
+      statLabel: "Trucks",
+    },
+    {
       icon: BarChart3,
-      title: "Analytics",
-      description: "View delivery statistics and reports",
+      title: t("dashboard.analytics"),
+      description: t("dashboard.analyticsDesc"),
       href: "/admin/analytics",
       stat: stats.activeDeliveries,
       statLabel: "active",
-    },
-    {
-      icon: Truck,
-      title: "Trucks",
-      description: "View and manage truck fleet",
-      href: "/admin/trucks",
-      stat: stats.totalPackages,
-      statLabel: "trucks",
     }
   ];
 
@@ -74,7 +78,7 @@ export default function AdminDashboardPage() {
               <BreadcrumbLink asChild>
                 <Link href="/" className="flex items-center gap-1">
                   <Home className="h-4 w-4 hover:text-green-600 transition-colors" />
-                  Home
+                  {t("nav.home")}
                 </Link>
               </BreadcrumbLink>
             </BreadcrumbItem>
@@ -82,7 +86,7 @@ export default function AdminDashboardPage() {
             <BreadcrumbItem>
               <BreadcrumbPage className="flex items-center gap-1">
                 <LayoutDashboard className="h-4 w-4 hover:text-green-600 transition-colors" />
-                Dashboard
+                {t("nav.dashboard")}
               </BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
@@ -91,10 +95,10 @@ export default function AdminDashboardPage() {
         {/* Page Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">
-            Admin Dashboard
+            {t("dashboard.title")}
           </h1>
           <p className="text-muted-foreground mt-1">
-            Manage your logistics operations
+            {t("dashboard.subtitle")}
           </p>
         </div>
 

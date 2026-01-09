@@ -22,9 +22,9 @@ const optionalNumber = (min: number, max: number, label: string) =>
 export const truckSchema = z.object({
     licensePlate: z.string().min(1, "License plate is required"),
     province: z.string().min(1, "Province is required"),
-    plateNumber: z.string().min(1, "Plate number is required"),
-    vin: z.string().min(17, "VIN must be 17 characters"),
-    engineNumber: z.string().min(1, "Engine number is required"),
+
+    vin: z.string().length(17, "VIN must be exactly 17 characters"),
+    engineNumber: z.string().length(9, "Engine number is required"),
     truckStatus: z.enum(["active", "inactive", "maintenance", "insurance-claim", "sold"], {
         message: "Truck status is required",
     }),
@@ -51,7 +51,7 @@ export type TruckFormValues = z.infer<typeof truckSchema>;
 export const truckDefaultValues: TruckFormValues = {
     licensePlate: "",
     province: "",
-    plateNumber: "",
+
     vin: "",
     engineNumber: "",
     truckStatus: "active",

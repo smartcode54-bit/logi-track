@@ -14,6 +14,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { LanguageSwitcher } from "./language-switcher";
+import { useLanguage } from "@/context/language";
 
 
 
@@ -23,6 +25,7 @@ export default function Navigation() {
   const router = useRouter();
   const currentUser = authContext?.currentUser;
   const [isDark, setIsDark] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     // Check localStorage for saved theme preference
@@ -83,6 +86,8 @@ export default function Navigation() {
         </div>
 
         <div className="flex items-center gap-4">
+          <LanguageSwitcher />
+
           {/* Dark/Light Mode Toggle */}
           <button
             onClick={toggleTheme}
@@ -113,7 +118,7 @@ export default function Navigation() {
                     </AvatarFallback>
                   </Avatar>
                   <span className="text-sm">
-                    Hi, {currentUser.displayName || currentUser.email}
+                    {/* Hi, {currentUser.displayName || currentUser.email} */}
                   </span>
                 </button>
               </DropdownMenuTrigger>
@@ -125,7 +130,7 @@ export default function Navigation() {
                 <DropdownMenuItem asChild>
                   <Link href="/my-account" className="flex items-center cursor-pointer">
                     <User className="mr-2 h-4 w-4" />
-                    <span>My Account</span>
+                    <span>{t('nav.myAccount')}</span>
                   </Link>
                 </DropdownMenuItem>
 
@@ -134,7 +139,7 @@ export default function Navigation() {
                   <DropdownMenuItem asChild>
                     <Link href="/admin/dashboard" className="flex items-center cursor-pointer">
                       <LayoutDashboard className="mr-2 h-4 w-4" />
-                      <span>Admin Dashboard</span>
+                      <span>{t('nav.adminDashboard')}</span>
                     </Link>
                   </DropdownMenuItem>
                 )}
@@ -142,7 +147,7 @@ export default function Navigation() {
                 <DropdownMenuItem asChild>
                   <Link href="/my-account" className="flex items-center cursor-pointer">
                     <User className="mr-2 h-4 w-4" />
-                    <span>My Favorite</span>
+                    <span>{t('nav.myFavorite')}</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -151,7 +156,7 @@ export default function Navigation() {
                   className="flex items-center cursor-pointer text-red-600 focus:text-red-600"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span>Logout</span>
+                  <span>{t('nav.logout')}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -159,13 +164,13 @@ export default function Navigation() {
             <ul className="flex items-center gap-4">
               <li>
                 <Link href="/property-stock-search" className="text-sm hover:underline">
-                  Property stock search
+                  {t('nav.propertyStockSearch')}
                 </Link>
               </li>
               <div className="text-sm">|</div>
               <li>
                 <Link href="/login" className="text-sm hover:underline">
-                  Login
+                  {t('nav.login')}
                 </Link>
               </li>
               <li>
@@ -173,7 +178,7 @@ export default function Navigation() {
               </li>
               <li>
                 <Link href="/register" className="text-sm hover:underline">
-                  Register
+                  {t('nav.register')}
                 </Link>
               </li>
             </ul>

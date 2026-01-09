@@ -12,8 +12,11 @@ import Link from "next/link";
 import { Truck, Home, LayoutDashboard, Plus, Search, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useLanguage } from "@/context/language";
 
 export default function TrucksListPage() {
+    const { t } = useLanguage();
+
     // Mock trucks data - replace with real data from Firestore
     const trucks = [
         {
@@ -63,6 +66,19 @@ export default function TrucksListPage() {
         }
     };
 
+    const getStatusLabel = (status: string) => {
+        switch (status) {
+            case "Available":
+                return t("trucks.status.available");
+            case "In Transit":
+                return t("trucks.status.inTransit");
+            case "Maintenance":
+                return t("trucks.status.maintenance");
+            default:
+                return status;
+        }
+    };
+
     return (
         <div className="container mx-auto px-4 py-8">
             <div className="max-w-7xl mx-auto">
@@ -73,7 +89,7 @@ export default function TrucksListPage() {
                             <BreadcrumbLink asChild>
                                 <Link href="/" className="flex items-center gap-1">
                                     <Home className="h-4 w-4 hover:text-green-600 transition-colors" />
-                                    Home
+                                    {t("nav.home")}
                                 </Link>
                             </BreadcrumbLink>
                         </BreadcrumbItem>
@@ -82,7 +98,7 @@ export default function TrucksListPage() {
                             <BreadcrumbLink asChild>
                                 <Link href="/admin/dashboard" className="flex items-center gap-1">
                                     <LayoutDashboard className="h-4 w-4 hover:text-green-600 transition-colors" />
-                                    Dashboard
+                                    {t("nav.dashboard")}
                                 </Link>
                             </BreadcrumbLink>
                         </BreadcrumbItem>
@@ -90,7 +106,7 @@ export default function TrucksListPage() {
                         <BreadcrumbItem>
                             <BreadcrumbPage className="flex items-center gap-1">
                                 <Truck className="h-4 w-4 hover:text-green-600 transition-colors" />
-                                Trucks
+                                {t("trucks.title")}
                             </BreadcrumbPage>
                         </BreadcrumbItem>
                     </BreadcrumbList>
@@ -100,16 +116,16 @@ export default function TrucksListPage() {
                 <div className="flex items-center justify-between mb-8">
                     <div>
                         <h1 className="text-3xl font-bold text-foreground">
-                            Trucks
+                            {t("trucks.title")}
                         </h1>
                         <p className="text-muted-foreground mt-1">
-                            Manage your truck fleet
+                            {t("trucks.subtitle")}
                         </p>
                     </div>
                     <Button asChild className="flex items-center gap-2">
                         <Link href="/admin/trucks/new">
                             <Plus className="h-4 w-4" />
-                            Add Truck
+                            {t("trucks.addTruck")}
                         </Link>
                     </Button>
                 </div>
@@ -118,7 +134,7 @@ export default function TrucksListPage() {
                 <div className="relative mb-6">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder="Search trucks..."
+                        placeholder={t("trucks.searchPlaceholder")}
                         className="pl-10"
                     />
                 </div>
@@ -148,7 +164,7 @@ export default function TrucksListPage() {
                                     {truck.type}
                                 </div>
                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(truck.status)}`}>
-                                    {truck.status}
+                                    {getStatusLabel(truck.status)}
                                 </span>
                                 <button className="p-2 hover:bg-accent rounded-md transition-colors">
                                     <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
@@ -163,14 +179,14 @@ export default function TrucksListPage() {
                     <div className="text-center py-12">
                         <Truck className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                         <h3 className="text-lg font-medium text-foreground mb-2">
-                            No trucks yet
+                            {t("trucks.noTrucks")}
                         </h3>
                         <p className="text-muted-foreground mb-4">
-                            Get started by adding your first truck.
+                            {t("trucks.getStarted")}
                         </p>
                         <Button>
                             <Plus className="h-4 w-4 mr-2" />
-                            Add Truck
+                            {t("trucks.addTruck")}
                         </Button>
                     </div>
                 )}

@@ -1,5 +1,8 @@
 "use client";
 
+import { useState } from "react";
+
+
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -8,6 +11,7 @@ import {
     BreadcrumbPage,
     BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { THAILAND_PROVINCES } from "@/lib/constants";
 import Link from "next/link";
 import { Truck, Home, LayoutDashboard, Save, ArrowLeft, ImagePlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,14 +33,20 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { truckSchema, TruckFormValues, truckDefaultValues } from "@/validate/truckSchema";
+import { useLanguage } from "@/context/language";
 
 export default function CreateTruckPage() {
     const router = useRouter();
     const [images, setImages] = useState<{ file: File; preview: string }[]>([]);
+
+    const { t } = useLanguage();
+
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({ length: 11 }, (_, i) => (currentYear - i).toString());
 
     // Initialize React Hook Form with Zod resolver
     const form = useForm<TruckFormValues>({
@@ -100,7 +110,7 @@ export default function CreateTruckPage() {
                             <BreadcrumbLink asChild>
                                 <Link href="/" className="flex items-center gap-1">
                                     <Home className="h-4 w-4 hover:text-green-600 transition-colors" />
-                                    Home
+                                    {t("nav.home")}
                                 </Link>
                             </BreadcrumbLink>
                         </BreadcrumbItem>
@@ -109,7 +119,7 @@ export default function CreateTruckPage() {
                             <BreadcrumbLink asChild>
                                 <Link href="/admin/dashboard" className="flex items-center gap-1">
                                     <LayoutDashboard className="h-4 w-4 hover:text-green-600 transition-colors" />
-                                    Dashboard
+                                    {t("nav.dashboard")}
                                 </Link>
                             </BreadcrumbLink>
                         </BreadcrumbItem>
@@ -118,13 +128,13 @@ export default function CreateTruckPage() {
                             <BreadcrumbLink asChild>
                                 <Link href="/admin/trucks" className="flex items-center gap-1">
                                     <Truck className="h-4 w-4 hover:text-green-600 transition-colors" />
-                                    Trucks
+                                    {t("trucks.title")}
                                 </Link>
                             </BreadcrumbLink>
                         </BreadcrumbItem>
                         <BreadcrumbSeparator />
                         <BreadcrumbItem>
-                            <BreadcrumbPage>New Truck</BreadcrumbPage>
+                            <BreadcrumbPage>{t("New Truck")}</BreadcrumbPage>
                         </BreadcrumbItem>
                     </BreadcrumbList>
                 </Breadcrumb>
@@ -133,16 +143,16 @@ export default function CreateTruckPage() {
                 <div className="flex items-center justify-between mb-8">
                     <div>
                         <h1 className="text-3xl font-bold text-foreground">
-                            Add New Truck
+                            {t("New Truck")}
                         </h1>
                         <p className="text-muted-foreground mt-1">
-                            Add a new truck to your fleet
+                            {t("Add a new truck")}
                         </p>
                     </div>
                     <Button variant="outline" asChild>
                         <Link href="/admin/trucks" className="flex items-center gap-2">
                             <ArrowLeft className="h-4 w-4" />
-                            Back
+                            {t("back to Trucks")}
                         </Link>
                     </Button>
                 </div>
@@ -152,14 +162,14 @@ export default function CreateTruckPage() {
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         {/* Vehicle Identification */}
                         <div className="space-y-4">
-                            <h2 className="text-lg font-semibold text-foreground border-b pb-2">Vehicle Identification</h2>
+                            <h2 className="text-lg font-semibold text-foreground border-b pb-2">{t("identification")}</h2>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <FormField
                                     control={form.control}
                                     name="licensePlate"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>License Plate *</FormLabel>
+                                            <FormLabel>{t("licensePlate")} *</FormLabel>
                                             <FormControl>
                                                 <Input placeholder="e.g., กข 1234" {...field} />
                                             </FormControl>
@@ -172,7 +182,7 @@ export default function CreateTruckPage() {
                                     name="province"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Province *</FormLabel>
+                                            <FormLabel>{t("province")} *</FormLabel>
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                 <FormControl>
                                                     <SelectTrigger>
@@ -180,39 +190,24 @@ export default function CreateTruckPage() {
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="Bangkok">Bangkok</SelectItem>
-                                                    <SelectItem value="Chiang Mai">Chiang Mai</SelectItem>
-                                                    <SelectItem value="Phuket">Phuket</SelectItem>
-                                                    <SelectItem value="Khon Kaen">Khon Kaen</SelectItem>
-                                                    <SelectItem value="Chonburi">Chonburi</SelectItem>
-                                                    <SelectItem value="Nakhon Ratchasima">Nakhon Ratchasima</SelectItem>
-                                                    <SelectItem value="Songkhla">Songkhla</SelectItem>
-                                                    <SelectItem value="Udon Thani">Udon Thani</SelectItem>
+                                                    {THAILAND_PROVINCES.map((province) => (
+                                                        <SelectItem key={province} value={province}>
+                                                            {province}
+                                                        </SelectItem>
+                                                    ))}
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
-                                <FormField
-                                    control={form.control}
-                                    name="plateNumber"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Plate Number *</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="e.g., 1กข 1234" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+
                                 <FormField
                                     control={form.control}
                                     name="vin"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>VIN *</FormLabel>
+                                            <FormLabel>{t("vin")} *</FormLabel>
                                             <FormControl>
                                                 <Input placeholder="e.g., 1HGBH41JXMN109186" {...field} />
                                             </FormControl>
@@ -225,7 +220,7 @@ export default function CreateTruckPage() {
                                     name="engineNumber"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Engine Number *</FormLabel>
+                                            <FormLabel>{t("engineNumber")} *</FormLabel>
                                             <FormControl>
                                                 <Input placeholder="e.g., 4D56-ABC123" {...field} />
                                             </FormControl>
@@ -238,7 +233,7 @@ export default function CreateTruckPage() {
                                     name="truckStatus"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Truck Status *</FormLabel>
+                                            <FormLabel>{t("truckStatus")} *</FormLabel>
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                 <FormControl>
                                                     <SelectTrigger>
@@ -262,14 +257,14 @@ export default function CreateTruckPage() {
 
                         {/* Vehicle Details */}
                         <div className="space-y-4">
-                            <h2 className="text-lg font-semibold text-foreground border-b pb-2">Vehicle Details</h2>
+                            <h2 className="text-lg font-semibold text-foreground border-b pb-2">{t("details")}</h2>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <FormField
                                     control={form.control}
                                     name="brand"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Brand *</FormLabel>
+                                            <FormLabel>{t("brand")} *</FormLabel>
                                             <FormControl>
                                                 <Input placeholder="e.g., Isuzu" {...field} />
                                             </FormControl>
@@ -282,7 +277,7 @@ export default function CreateTruckPage() {
                                     name="model"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Model *</FormLabel>
+                                            <FormLabel>{t("model")} *</FormLabel>
                                             <FormControl>
                                                 <Input placeholder="e.g., ELF" {...field} />
                                             </FormControl>
@@ -295,10 +290,21 @@ export default function CreateTruckPage() {
                                     name="year"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Year</FormLabel>
-                                            <FormControl>
-                                                <Input type="number" min="0" placeholder="e.g., 2023" {...field} />
-                                            </FormControl>
+                                            <FormLabel>{t("year")}</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select year" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {years.map((year) => (
+                                                        <SelectItem key={year} value={year}>
+                                                            {year}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -308,7 +314,7 @@ export default function CreateTruckPage() {
                                     name="color"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Color</FormLabel>
+                                            <FormLabel>{t("color")}</FormLabel>
                                             <FormControl>
                                                 <Input placeholder="e.g., White" {...field} />
                                             </FormControl>
@@ -321,7 +327,7 @@ export default function CreateTruckPage() {
                                     name="type"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Truck Type</FormLabel>
+                                            <FormLabel>{t("truckType")} *</FormLabel>
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                 <FormControl>
                                                     <SelectTrigger>
@@ -329,11 +335,11 @@ export default function CreateTruckPage() {
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
+                                                    <SelectItem value="Pickup">Pickup</SelectItem>
                                                     <SelectItem value="4 Wheels">4 Wheels</SelectItem>
                                                     <SelectItem value="6 Wheels">6 Wheels</SelectItem>
                                                     <SelectItem value="10 Wheels">10 Wheels</SelectItem>
                                                     <SelectItem value="18 Wheels">18 Wheels</SelectItem>
-                                                    <SelectItem value="Pickup">Pickup</SelectItem>
                                                     <SelectItem value="Van">Van</SelectItem>
                                                 </SelectContent>
                                             </Select>
@@ -346,14 +352,14 @@ export default function CreateTruckPage() {
                                     name="seats"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Seats</FormLabel>
+                                            <FormLabel>{t("seats")}</FormLabel>
                                             <FormControl>
-                                                <Input 
-                                                    type="number" 
-                                                    min="0" 
+                                                <Input
+                                                    type="number"
+                                                    min="0"
                                                     max="10"
                                                     step="1"
-                                                    placeholder="e.g., 3" 
+                                                    placeholder="e.g., 3"
                                                     value={field.value ?? ""}
                                                     onChange={(e) => {
                                                         const value = e.target.value;
@@ -374,14 +380,14 @@ export default function CreateTruckPage() {
 
                         {/* Engine & Capacity */}
                         <div className="space-y-4">
-                            <h2 className="text-lg font-semibold text-foreground border-b pb-2">Engine & Capacity</h2>
+                            <h2 className="text-lg font-semibold text-foreground border-b pb-2">{t("engine")}</h2>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <FormField
                                     control={form.control}
                                     name="fuelType"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Fuel Type</FormLabel>
+                                            <FormLabel>{t("fuelType")} *</FormLabel>
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                 <FormControl>
                                                     <SelectTrigger>
@@ -405,13 +411,13 @@ export default function CreateTruckPage() {
                                     name="engineCapacity"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Engine Capacity (cc)</FormLabel>
+                                            <FormLabel>{t("engine Capacity")}</FormLabel>
                                             <FormControl>
-                                                <Input 
-                                                    type="number" 
-                                                    min="0" 
+                                                <Input
+                                                    type="number"
+                                                    min="0"
                                                     step="1"
-                                                    placeholder="e.g., 3000" 
+                                                    placeholder="e.g., 3000"
                                                     value={field.value ?? ""}
                                                     onChange={(e) => {
                                                         const value = e.target.value;
@@ -432,13 +438,13 @@ export default function CreateTruckPage() {
                                     name="fuelCapacity"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Fuel Capacity (liters)</FormLabel>
+                                            <FormLabel>{t("fuel Capacity")}</FormLabel>
                                             <FormControl>
-                                                <Input 
-                                                    type="number" 
-                                                    min="0" 
+                                                <Input
+                                                    type="number"
+                                                    min="0"
                                                     step="1"
-                                                    placeholder="e.g., 200" 
+                                                    placeholder="e.g., 200"
                                                     value={field.value ?? ""}
                                                     onChange={(e) => {
                                                         const value = e.target.value;
@@ -459,13 +465,13 @@ export default function CreateTruckPage() {
                                     name="maxLoadWeight"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Max Load Weight (kg)</FormLabel>
+                                            <FormLabel>{t("max Load Weight")}</FormLabel>
                                             <FormControl>
-                                                <Input 
-                                                    type="number" 
-                                                    min="0" 
+                                                <Input
+                                                    type="number"
+                                                    min="0"
                                                     step="1"
-                                                    placeholder="e.g., 5000" 
+                                                    placeholder="e.g., 5000"
                                                     value={field.value ?? ""}
                                                     onChange={(e) => {
                                                         const value = e.target.value;
@@ -486,14 +492,14 @@ export default function CreateTruckPage() {
 
                         {/* Registration & Purchase */}
                         <div className="space-y-4">
-                            <h2 className="text-lg font-semibold text-foreground border-b pb-2">Registration & Purchase</h2>
+                            <h2 className="text-lg font-semibold text-foreground border-b pb-2">{t("trucks.new.section.registration")}</h2>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <FormField
                                     control={form.control}
                                     name="registrationDate"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Registration Date</FormLabel>
+                                            <FormLabel>{t("registration Date")}</FormLabel>
                                             <FormControl>
                                                 <Input type="date" {...field} />
                                             </FormControl>
@@ -506,7 +512,7 @@ export default function CreateTruckPage() {
                                     name="buyingDate"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Buying Date</FormLabel>
+                                            <FormLabel>{t("buying Date")}</FormLabel>
                                             <FormControl>
                                                 <Input type="date" {...field} />
                                             </FormControl>
@@ -519,7 +525,7 @@ export default function CreateTruckPage() {
                                     name="driver"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Assigned Driver</FormLabel>
+                                            <FormLabel>{t("driver")}</FormLabel>
                                             <FormControl>
                                                 <Input placeholder="e.g., John Smith" {...field} />
                                             </FormControl>
@@ -536,7 +542,7 @@ export default function CreateTruckPage() {
                             name="notes"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Notes</FormLabel>
+                                    <FormLabel>{t("notes")}</FormLabel>
                                     <FormControl>
                                         <Textarea
                                             placeholder="Additional notes about this truck..."
@@ -551,7 +557,7 @@ export default function CreateTruckPage() {
 
                         {/* Truck Photos */}
                         <div className="space-y-4">
-                            <h2 className="text-lg font-semibold text-foreground">Truck Photos</h2>
+                            <h2 className="text-lg font-semibold text-foreground">{t("photos")}</h2>
 
                             {/* Image Preview Grid */}
                             {images.length > 0 && (
@@ -583,14 +589,14 @@ export default function CreateTruckPage() {
                             >
                                 <ImagePlus className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
                                 <p className="text-muted-foreground mb-2">
-                                    Drag and drop images here, or click to select
+                                    {t("Drag and drop files here or")}
                                 </p>
                                 <p className="text-xs text-muted-foreground mb-4">
-                                    PNG, JPG or WEBP (max 5MB each)
+                                    {t("Browse image from your device")}
                                 </p>
                                 <label className="cursor-pointer">
                                     <Button type="button" variant="outline" asChild>
-                                        <span>Choose Files</span>
+                                        <span>{t("Browse")}</span>
                                     </Button>
                                     <input
                                         type="file"
@@ -605,11 +611,11 @@ export default function CreateTruckPage() {
 
                         <div className="flex justify-end gap-4">
                             <Button type="button" variant="outline" asChild>
-                                <Link href="/admin/trucks">Cancel</Link>
+                                <Link href="/admin/trucks">{t("Cancel")}</Link>
                             </Button>
                             <Button type="submit" className="flex items-center gap-2">
                                 <Save className="h-4 w-4" />
-                                Save Truck
+                                {t("Save")}
                             </Button>
                         </div>
                     </form>

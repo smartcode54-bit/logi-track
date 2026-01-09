@@ -9,43 +9,8 @@ import { LayoutDashboard, Building2, Users, Truck, Package, BarChart3, Settings,
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
-const sidebarItems = [
-    {
-        title: "Dashboard",
-        href: "/admin/dashboard",
-        icon: LayoutDashboard,
-    },
-    {
-        title: "Trucks",
-        href: "/admin/trucks",
-        icon: Truck,
-    },
-    {
-        title: "Users",
-        href: "/admin/users",
-        icon: Users,
-    },
-    {
-        title: "Drivers",
-        href: "/admin/drivers",
-        icon: Truck,
-    },
-    {
-        title: "Packages",
-        href: "/admin/packages",
-        icon: Package,
-    },
-    {
-        title: "Analytics",
-        href: "/admin/analytics",
-        icon: BarChart3,
-    },
-    {
-        title: "Settings",
-        href: "/admin/settings",
-        icon: Settings,
-    },
-];
+import { useLanguage } from "@/context/language";
+
 
 export default function AdminLayout({
     children,
@@ -57,6 +22,45 @@ export default function AdminLayout({
     const pathname = usePathname();
     const currentUser = authContext?.currentUser;
     const [sidebarOpen, setSidebarOpen] = useState(true);
+    const { t } = useLanguage();
+
+    const sidebarItems = [
+        {
+            title: t("nav.dashboard"),
+            href: "/admin/dashboard",
+            icon: LayoutDashboard,
+        },
+        {
+            title: t("nav.trucks"),
+            href: "/admin/trucks",
+            icon: Truck,
+        },
+        {
+            title: t("nav.users"),
+            href: "/admin/users",
+            icon: Users,
+        },
+        {
+            title: t("nav.drivers"),
+            href: "/admin/drivers",
+            icon: Truck,
+        },
+        {
+            title: t("nav.packages"),
+            href: "/admin/packages",
+            icon: Package,
+        },
+        {
+            title: t("nav.analytics"),
+            href: "/admin/analytics",
+            icon: BarChart3,
+        },
+        {
+            title: t("nav.settings"),
+            href: "/admin/settings",
+            icon: Settings,
+        },
+    ];
 
     useEffect(() => {
         if (authContext && !currentUser) {
@@ -92,7 +96,7 @@ export default function AdminLayout({
                         {/* Sidebar Toggle */}
                         <div className="flex items-center justify-between mb-4">
                             {sidebarOpen && (
-                                <h2 className="text-lg font-semibold text-foreground">Admin Panel</h2>
+                                <h2 className="text-lg font-semibold text-foreground">{t("admin.panel")}</h2>
                             )}
                             <Button
                                 variant="ghost"
@@ -162,7 +166,7 @@ export default function AdminLayout({
                 >
                     <div className="p-4">
                         <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-lg font-semibold text-foreground">Admin Panel</h2>
+                            <h2 className="text-lg font-semibold text-foreground">{t("admin.panel")}</h2>
                             <Button
                                 variant="ghost"
                                 size="icon"

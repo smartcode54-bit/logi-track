@@ -13,6 +13,8 @@
 10. [Admin Dashboard Page](#10-admin-dashboard-page)
 11. [Admin Role Management & Cookie Token Storage](#11-admin-role-management--cookie-token-storage)
 12. [Route Protection with Next.js Middleware](#12-route-protection-with-nextjs-middleware)
+13. [List of Province in Thailand](#13-list-of-province-in-thailand)
+14. [Bilingual Support (EN/TH)](#14-bilingual-support-enth)
 
 ---
 
@@ -1917,4 +1919,77 @@ console.error("[Middleware] ❌ Token decoding error:", error);
 - ✅ **Improved route matching** - Added `isRouteMatch()` function to prevent false positive matches
 - ✅ **Comprehensive logging system** - Added detailed logging for request processing, route classification, token validation, and redirects
 - ✅ **Enhanced error handling** - Better error logging with context and debugging information
+- ✅ **Province List** - Added comprehensive list of Thailand provinces
+- ✅ **Bilingual Support** - Added English/Thai language support with switcher
+
+---
+
+## 13. List of Province in Thailand
+
+### Step 13.1: Add Province List Constant
+
+**File:** `lib/constants.ts`
+
+Added `THAILAND_PROVINCES` constant containing all 77 provinces.
+
+```typescript
+export const THAILAND_PROVINCES = [
+  "Bangkok", "Amnat Charoen", "Ang Thong", ...
+  // ... full list
+] as const;
+```
+
+### Step 13.2: Update Truck Form
+
+**File:** `app/admin/trucks/new/page.tsx`
+
+Updated the province select to use the `THAILAND_PROVINCES` constant.
+
+```tsx
+import { THAILAND_PROVINCES } from "@/lib/constants";
+
+// ...
+
+<SelectContent>
+    {THAILAND_PROVINCES.map((province) => (
+        <SelectItem key={province} value={province}>
+            {province}
+        </SelectItem>
+    ))}
+</SelectContent>
+```
+
+---
+
+## 14. Bilingual Support (EN/TH)
+
+### Step 14.1: Create Language Context
+
+**File:** `context/language.tsx`
+
+Created `LanguageContext` to manage language state (`en` | `th`) and translations.
+
+### Step 14.2: Create Language Switcher
+
+**File:** `components/language-switcher.tsx`
+
+Created a component to toggle between English and Thai.
+
+### Step 14.3: Integrate into Navigation
+
+**File:** `components/navigation.tsx`
+
+Added `LanguageSwitcher` to the navbar and implemented translations for menu items.
+
+### Step 14.4: App-wide Language Provider
+
+**File:** `app/layout.tsx`
+
+Wrapped the application with `LanguageProvider`.
+
+### Step 14.5: Translate Admin Area
+
+**Files:** `app/admin/layout.tsx`, `app/admin/dashboard/page.tsx`
+
+Implemented `useLanguage` hook to translate sidebar items and dashboard content.
 
