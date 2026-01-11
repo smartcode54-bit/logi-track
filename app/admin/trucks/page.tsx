@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -9,58 +10,64 @@ import {
     BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import Link from "next/link";
-import { Truck, Home, LayoutDashboard, Plus, Search, MoreHorizontal } from "lucide-react";
+import { Truck, Home, LayoutDashboard, Plus, Search, MoreHorizontal, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/context/language";
+import { getTrucks, TruckData } from "./actions";
+import { formatLicensePlate } from "@/lib/utils";
 
 export default function TrucksListPage() {
     const { t } = useLanguage();
+    const [trucks, setTrucks] = useState<TruckData[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
 
-    // Mock trucks data - replace with real data from Firestore
-    const trucks = [
-        {
-            id: "1",
-            plateNumber: "1กข 1234",
-            model: "Isuzu ELF",
-            type: "4 Wheels",
-            status: "Available",
-            driver: "John Smith",
-        },
-        {
-            id: "2",
-            plateNumber: "2ขค 5678",
-            model: "Hino 500",
-            type: "6 Wheels",
-            status: "In Transit",
-            driver: "Mike Johnson",
-        },
-        {
-            id: "3",
-            plateNumber: "3คง 9012",
-            model: "Isuzu FTR",
-            type: "10 Wheels",
-            status: "Available",
-            driver: "David Lee",
-        },
-        {
-            id: "4",
-            plateNumber: "4งจ 3456",
-            model: "Hino 700",
-            type: "18 Wheels",
-            status: "Maintenance",
-            driver: "Tom Wilson",
-        },
-    ];
+    // Fetch trucks from Firestore
+    useEffect(() => {
+        const fetchTrucks = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                const data = await getTrucks();
+                setTrucks(data);
+            } catch (err) {
+                console.error("Error fetching trucks:", err);
+                setError(err instanceof Error ? err.message : "Failed to load trucks");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchTrucks();
+    }, []);
+
+    // Filter trucks based on search query
+    const filteredTrucks = trucks.filter((truck) => {
+        if (!searchQuery) return true;
+        const query = searchQuery.toLowerCase();
+        return (
+            truck.licensePlate.toLowerCase().includes(query) ||
+            truck.model.toLowerCase().includes(query) ||
+            truck.brand.toLowerCase().includes(query) ||
+            truck.driver.toLowerCase().includes(query) ||
+            truck.province.toLowerCase().includes(query)
+        );
+    });
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case "Available":
+            case "active":
                 return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
-            case "In Transit":
-                return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
-            case "Maintenance":
+            case "inactive":
+                return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
+            case "maintenance":
                 return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
+            case "insurance-claim":
+                return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+            case "sold":
+                return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
             default:
                 return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
         }
@@ -68,12 +75,16 @@ export default function TrucksListPage() {
 
     const getStatusLabel = (status: string) => {
         switch (status) {
-            case "Available":
-                return t("trucks.status.available");
-            case "In Transit":
-                return t("trucks.status.inTransit");
-            case "Maintenance":
-                return t("trucks.status.maintenance");
+            case "active":
+                return t("trucks.status.available") || "Active";
+            case "inactive":
+                return "Inactive";
+            case "maintenance":
+                return t("trucks.status.maintenance") || "Maintenance";
+            case "insurance-claim":
+                return "Insurance Claim";
+            case "sold":
+                return "Sold";
             default:
                 return status;
         }
@@ -134,60 +145,86 @@ export default function TrucksListPage() {
                 <div className="relative mb-6">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder={t("trucks.searchPlaceholder")}
+                        placeholder={t("trucks.searchPlaceholder") || "Search trucks..."}
                         className="pl-10"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
 
+                {/* Error State */}
+                {error && (
+                    <div className="bg-destructive/15 text-destructive px-4 py-3 rounded-md border border-destructive/50 mb-6">
+                        <p className="text-sm font-medium">{error}</p>
+                    </div>
+                )}
+
+                {/* Loading State */}
+                {loading && (
+                    <div className="flex items-center justify-center py-12">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                        <span className="ml-2 text-muted-foreground">Loading trucks...</span>
+                    </div>
+                )}
+
                 {/* Trucks List */}
-                <div className="space-y-2">
-                    {trucks.map((truck) => (
-                        <div
-                            key={truck.id}
-                            className="group flex items-center justify-between p-4 rounded-lg border border-border bg-card hover:bg-accent hover:border-accent-foreground/20 transition-all duration-200"
-                        >
-                            <div className="flex items-center gap-4">
-                                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary">
-                                    <Truck className="w-5 h-5" />
+                {!loading && !error && (
+                    <div className="space-y-2">
+                        {filteredTrucks.map((truck) => (
+                            <div
+                                key={truck.id}
+                                className="group flex items-center justify-between p-4 rounded-lg border border-border bg-card hover:bg-accent hover:border-accent-foreground/20 transition-all duration-200"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary">
+                                        <Truck className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-medium text-foreground">
+                                            {formatLicensePlate(truck.licensePlate)} ({truck.province})
+                                        </h3>
+                                        <p className="text-sm text-muted-foreground">
+                                            {truck.brand} {truck.model} • {truck.driver}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="font-medium text-foreground">
-                                        {truck.plateNumber}
-                                    </h3>
-                                    <p className="text-sm text-muted-foreground">
-                                        {truck.model} • {truck.driver}
-                                    </p>
+                                <div className="flex items-center gap-6">
+                                    <div className="text-sm text-muted-foreground">
+                                        {truck.type}
+                                    </div>
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(truck.truckStatus)}`}>
+                                        {getStatusLabel(truck.truckStatus)}
+                                    </span>
+                                    <button className="p-2 hover:bg-accent rounded-md transition-colors">
+                                        <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                                    </button>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-6">
-                                <div className="text-sm text-muted-foreground">
-                                    {truck.type}
-                                </div>
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(truck.status)}`}>
-                                    {getStatusLabel(truck.status)}
-                                </span>
-                                <button className="p-2 hover:bg-accent rounded-md transition-colors">
-                                    <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                )}
 
                 {/* Empty State */}
-                {trucks.length === 0 && (
+                {!loading && !error && filteredTrucks.length === 0 && (
                     <div className="text-center py-12">
                         <Truck className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                         <h3 className="text-lg font-medium text-foreground mb-2">
-                            {t("trucks.noTrucks")}
+                            {searchQuery ? "No trucks found" : t("trucks.noTrucks") || "No trucks yet"}
                         </h3>
                         <p className="text-muted-foreground mb-4">
-                            {t("trucks.getStarted")}
+                            {searchQuery 
+                                ? "Try adjusting your search query"
+                                : t("trucks.getStarted") || "Get started by adding your first truck"
+                            }
                         </p>
-                        <Button>
-                            <Plus className="h-4 w-4 mr-2" />
-                            {t("trucks.addTruck")}
-                        </Button>
+                        {!searchQuery && (
+                            <Button asChild>
+                                <Link href="/admin/trucks/new">
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    {t("trucks.addTruck") || "Add Truck"}
+                                </Link>
+                            </Button>
+                        )}
                     </div>
                 )}
             </div>

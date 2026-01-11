@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Truck, Home, LayoutDashboard, Save, ArrowLeft } from "lucide-react";
+import { Truck, Home, LayoutDashboard, Save, ArrowLeft, Eye } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Form } from "@/components/ui/form";
 import { useLanguage } from "@/context/language";
+import { useAuth } from "@/context/auth";
 import { truckSchema, TruckFormValues, truckDefaultValues } from "@/validate/truckSchema";
 import * as z from "zod";
 
@@ -26,14 +27,20 @@ import { VehicleDetailsSection } from "./components/VehicleDetailsSection";
 import { RegistrationSection } from "./components/RegistrationSection";
 import { PhotosSection } from "./components/PhotosSection";
 import { EngineInformationSection } from "./components/EngineCapacitySection";
+import { TruckPreview } from "./components/TruckPreview";
+import { saveNewTruckToFirestore } from "./action";
 
 export default function CreateTruckPage() {
     const router = useRouter();
     const [images, setImages] = useState<{ file: File; preview: string }[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [showPreview, setShowPreview] = useState(false);
+    const [previewData, setPreviewData] = useState<z.infer<typeof truckSchema> | null>(null);
 
     const { t } = useLanguage();
+    const authContext = useAuth();
+    const currentUser = authContext?.currentUser ?? null;
 
     // Initialize React Hook Form with Zod resolver
     const form = useForm<TruckFormValues>({
@@ -41,14 +48,37 @@ export default function CreateTruckPage() {
         defaultValues: truckDefaultValues,
     });
 
-    // Form submission handler
-    const onSubmit = async (data: z.infer<typeof truckSchema>) => {
+    // Handle preview button click
+    const handlePreview = (data: z.infer<typeof truckSchema>) => {
+        setPreviewData(data);
+        setShowPreview(true);
+        setError(null);
+    };
+
+    // Handle edit button - go back to form
+    const handleEdit = () => {
+        setShowPreview(false);
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    // Handle confirm and save
+    const handleConfirmSave = async () => {
+        if (!previewData) return;
+
         setIsSubmitting(true);
         setError(null);
         try {
+            // Get token from current user
+            if (!currentUser) {
+                throw new Error("User not authenticated");
+            }
+
+            const token = await currentUser.getIdToken();
+            
             // Log form data to console
             console.log("=== Form Submitted ===");
-            console.log("Form Data:", JSON.stringify(data, null, 2));
+            console.log("Form Data:", JSON.stringify(previewData, null, 2));
             console.log("Images Count:", images.length);
             if (images.length > 0) {
                 console.log("Images:", images.map(img => ({
@@ -60,8 +90,8 @@ export default function CreateTruckPage() {
             }
             console.log("====================");
             
-            // TODO: Save truck to Firestore
-            // await saveTruckToFirestore(data, images);
+            // Save truck to Firestore with token verification
+            await saveNewTruckToFirestore(previewData, images, token);
             
             // Show success and redirect
             router.push("/admin/trucks");
@@ -71,9 +101,13 @@ export default function CreateTruckPage() {
                 ? error.message 
                 : "Failed to save truck. Please try again.";
             setError(errorMessage);
-        } finally {
             setIsSubmitting(false);
         }
+    };
+
+    // Form submission handler - show preview instead of saving directly
+    const onSubmit = (data: z.infer<typeof truckSchema>) => {
+        handlePreview(data);
     };
 
     return (
@@ -133,35 +167,54 @@ export default function CreateTruckPage() {
                     </Button>
                 </div>
 
-                {/* Form with React Hook Form */}
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
+                {/* Show Preview or Form */}
+                {showPreview && previewData ? (
+                    <div>
                         {error && (
-                            <div className="bg-destructive/15 text-destructive px-4 py-3 rounded-md border border-destructive/50">
+                            <div className="bg-destructive/15 text-destructive px-4 py-3 rounded-md border border-destructive/50 mb-6">
                                 <p className="text-sm font-medium">{error}</p>
                             </div>
                         )}
-                        <IdentificationSection />
-                        <VehicleDetailsSection />
-                        <EngineInformationSection />
-                        <RegistrationSection />
-                        <PhotosSection images={images} setImages={setImages} />
+                        <TruckPreview
+                            data={previewData}
+                            images={images}
+                            onEdit={handleEdit}
+                            onConfirm={handleConfirmSave}
+                            onCancel={() => router.push("/admin/trucks")}
+                            isSubmitting={isSubmitting}
+                        />
+                    </div>
+                ) : (
+                    /* Form with React Hook Form */
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
+                            {error && (
+                                <div className="bg-destructive/15 text-destructive px-4 py-3 rounded-md border border-destructive/50">
+                                    <p className="text-sm font-medium">{error}</p>
+                                </div>
+                            )}
+                            <IdentificationSection />
+                            <VehicleDetailsSection />
+                            <EngineInformationSection />
+                            <RegistrationSection />
+                            <PhotosSection images={images} setImages={setImages} />
 
-                        <div className="flex justify-end gap-4">
-                            <Button type="button" variant="outline" asChild>
-                                <Link href="/admin/trucks">{t("Cancel")}</Link>
-                            </Button>
-                            <Button 
-                                type="submit" 
-                                className="flex items-center gap-2"
-                                disabled={isSubmitting}
-                            >
-                                <Save className="h-4 w-4" />
-                                {isSubmitting ? t("common.loading") || "Saving..." : t("Save")}
-                            </Button>
-                        </div>
-                    </form>
-                </Form>
+                            <div className="flex justify-end gap-4">
+                                <Button type="button" variant="outline" asChild>
+                                    <Link href="/admin/trucks">{t("Cancel")}</Link>
+                                </Button>
+                                <Button 
+                                    type="submit" 
+                                    className="flex items-center gap-2"
+                                    disabled={isSubmitting}
+                                >
+                                    <Eye className="h-4 w-4" />
+                                    Preview
+                                </Button>
+                            </div>
+                        </form>
+                    </Form>
+                )}
             </div>
         </div>
     );

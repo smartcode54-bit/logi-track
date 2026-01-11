@@ -45,8 +45,17 @@ export default function ContinueWithGoogleButton() {
         alert("Sign in was cancelled. Please try again.");
       } else if (error.code === "auth/popup-blocked") {
         alert("Popup was blocked. Please allow popups for this site.");
+      } else if (error.code === "auth/configuration-not-found") {
+        alert(
+          "Firebase Authentication is not configured properly.\n\n" +
+          "Please check:\n" +
+          "1. Firebase Authentication is enabled in Firebase Console\n" +
+          "2. Google Sign-In provider is enabled\n" +
+          "3. API key and project ID are correct in .env.local\n" +
+          "4. Restart Next.js dev server after updating .env.local"
+        );
       } else {
-        alert("An error occurred. Please try again.");
+        alert(`An error occurred: ${error.message || "Please try again."}`);
       }
     } finally {
       setLoading(false);

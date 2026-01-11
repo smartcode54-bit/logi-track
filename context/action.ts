@@ -46,19 +46,30 @@ export const setToken = async ({
         const userRecord = await auth.getUser(verifiedToken.uid);
         
         // Check if user email is in admin emails list
-        const adminEmails = process.env.SYSTEM_ADMIN_EMAILS?.split(",").map(email => email.trim()) || [];
+        // Support both SYSTEM_ADMIN_EMAILS and FIREBASE_SYSTEM_ADMIN for backward compatibility
+        const adminEmailsString = process.env.SYSTEM_ADMIN_EMAILS || process.env.FIREBASE_SYSTEM_ADMIN || "";
+        const adminEmails = adminEmailsString
+            .replace(/["']/g, "") // Remove quotes if present
+            .split(",")
+            .map(email => email.trim())
+            .filter(email => email.length > 0);
         
+        console.log("[setToken] Admin emails from env:", adminEmails);
+        console.log("[setToken] User email:", userRecord.email);
+        console.log("[setToken] Current claims:", userRecord.customClaims);
         
-        if (userRecord.email && adminEmails.includes(userRecord.email) && !userRecord.customClaims?.admin) {
-            
-            await auth.setCustomUserClaims(verifiedToken.uid, {
-                admin: true,
-            });
-            
-        } else if (userRecord.email && adminEmails.includes(userRecord.email) && userRecord.customClaims?.admin) {
-            
+        if (userRecord.email && adminEmails.includes(userRecord.email)) {
+            if (!userRecord.customClaims?.admin) {
+                console.log("[setToken] Setting admin claim for:", userRecord.email);
+                await auth.setCustomUserClaims(verifiedToken.uid, {
+                    admin: true,
+                });
+                console.log("[setToken] Admin claim set successfully");
+            } else {
+                console.log("[setToken] User already has admin claim");
+            }
         } else {
-            
+            console.log("[setToken] User email not in admin list or email not found");
         }
         const cookieStore = await cookies();
         
