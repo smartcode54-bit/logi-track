@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -12,15 +13,31 @@ import Link from "next/link";
 import { LayoutDashboard, Users, Package, Truck, BarChart3, Home, ChevronRight } from "lucide-react";
 
 import { useLanguage } from "@/context/language";
+import { getTrucks } from "../trucks/actions";
 
 export default function AdminDashboardPage() {
   const { t } = useLanguage();
+  const [truckCount, setTruckCount] = useState<number>(0);
+
+  // Fetch truck count on mount
+  useEffect(() => {
+    const fetchTruckCount = async () => {
+      try {
+        const trucks = await getTrucks();
+        setTruckCount(trucks.length);
+      } catch (error) {
+        console.error("Error fetching truck count:", error);
+      }
+    };
+    fetchTruckCount();
+  }, []);
 
   // Mock data - replace with real data from Firestore
   const stats = {
     totalUsers: 0,
     totalDrivers: 0,
     totalPackages: 0,
+    totalTrucks: truckCount,
     activeDeliveries: 0,
   };
 
@@ -55,7 +72,7 @@ export default function AdminDashboardPage() {
       title: t("dashboard.manageTrucks"),
       description: t("dashboard.manageTrucksDesc"),
       href: "/admin/trucks",
-      stat: stats.totalPackages,
+      stat: stats.totalTrucks,
       statLabel: "Trucks",
     },
     {

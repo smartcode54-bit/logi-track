@@ -78,7 +78,7 @@ export default function Navigation() {
   };
 
   return (
-    <nav className="bg-green-800 text-white p-4">
+    <nav className="bg-green-800 text-white p-4 sticky top-0 z-50 shadow-md">
       <div className="w-full flex items-center justify-between px-4">
         <div className="text-2xl font-semibold flex items-center gap-2 font-poppins">
           <Flame className="w-5 h-5" />
