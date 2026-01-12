@@ -1,6 +1,7 @@
 "use client";
 
 import Navigation from "@/components/navigation";
+import Footer from "@/components/footer";
 import { useLanguage } from "@/context/language";
 
 export default function Home() {
@@ -16,6 +17,7 @@ export default function Home() {
           </h1>
         </div>
       </main>
+      <Footer />
     </div>
   );
 }

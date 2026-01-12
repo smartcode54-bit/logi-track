@@ -13,7 +13,7 @@ import Link from "next/link";
 import { LayoutDashboard, Users, Package, Truck, BarChart3, Home, ChevronRight } from "lucide-react";
 
 import { useLanguage } from "@/context/language";
-import { getTrucks } from "../trucks/actions";
+import { getTrucksClient } from "../trucks/actions.client";
 
 export default function AdminDashboardPage() {
   const { t } = useLanguage();
@@ -23,7 +23,7 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     const fetchTruckCount = async () => {
       try {
-        const trucks = await getTrucks();
+        const trucks = await getTrucksClient();
         setTruckCount(trucks.length);
       } catch (error) {
         console.error("Error fetching truck count:", error);

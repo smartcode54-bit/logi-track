@@ -56,6 +56,9 @@ export const truckSchema = z.object({
 // Type inference from schema - use input type for form values
 export type TruckFormValues = z.input<typeof truckSchema>;
 
+// Type for validated data (after form submission passes validation)
+export type TruckValidatedData = z.infer<typeof truckSchema>;
+
 // Default values for the form
 export const truckDefaultValues: TruckFormValues = {
     licensePlate: "",

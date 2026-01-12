@@ -10,7 +10,6 @@ import { formatLicensePlate } from "@/lib/utils";
 
 interface TruckPreviewProps {
     data: z.infer<typeof truckSchema>;
-    images: { file: File; preview: string }[];
     onEdit: () => void;
     onConfirm: () => void;
     onCancel: () => void;
@@ -19,7 +18,6 @@ interface TruckPreviewProps {
 
 export function TruckPreview({
     data,
-    images,
     onEdit,
     onConfirm,
     onCancel,
@@ -170,28 +168,6 @@ export function TruckPreview({
                     )}
                 </CardContent>
             </Card>
-
-            {/* Photos Section */}
-            {images.length > 0 && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Photos ({images.length})</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-3 gap-4">
-                            {images.map((image, index) => (
-                                <div key={index} className="relative aspect-video rounded-lg overflow-hidden border">
-                                    <img
-                                        src={image.preview}
-                                        alt={`Preview ${index + 1}`}
-                                        className="w-full h-full object-cover"
-                                    />
-                                </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
 
             {/* Action Buttons */}
             <div className="flex justify-end gap-4 pt-4 border-t">

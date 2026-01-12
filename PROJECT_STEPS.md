@@ -15,6 +15,9 @@
 12. [Route Protection with Next.js Middleware](#12-route-protection-with-nextjs-middleware)
 13. [List of Province in Thailand](#13-list-of-province-in-thailand)
 14. [Bilingual Support (EN/TH)](#14-bilingual-support-enth)
+15. [Add New Truck Page](#15-add-new-truck-page)
+16. [Truck List Dropdown Menu](#16-truck-list-dropdown-menu)
+17. [Update Truck Data](#17-update-truck-data)
 
 ---
 
@@ -1992,4 +1995,148 @@ Wrapped the application with `LanguageProvider`.
 **Files:** `app/admin/layout.tsx`, `app/admin/dashboard/page.tsx`
 
 Implemented `useLanguage` hook to translate sidebar items and dashboard content.
+
+
+---
+
+
+---
+
+## 15. Add New Truck Page
+
+### Step 15.1: Create Truck Page Structure
+**File:** `app/admin/trucks/new/page.tsx`
+- Client-side form using `react-hook-form` and `zod`
+- Reused modular sections: `IdentificationSection`, `VehicleDetailsSection`, `EngineInformationSection`, `RegistrationSection`
+- Implements "Preview" mode to verify data before saving
+- Handles form submission using `saveNewTruckToFirestoreClient`
+
+### Step 15.2: Save Action
+**File:** `app/admin/trucks/new/action.client.ts`
+- Uses `saveNewTruckToFirestoreClient` to create new documents
+- Automatically adds metadata: `createdBy`, `createdAt`, `updatedAt`
+
+```typescript
+export const saveNewTruckToFirestoreClient = async (
+    data: z.infer<typeof truckSchema>,
+    userId: string
+) => {
+    try {
+        console.log("[saveNewTruckToFirestoreClient] Starting save process...");
+
+        // Create the truck document
+        const trucksRef = collection(db, "trucks");
+        const docRef = await addDoc(trucksRef, {
+            ...data,
+            createdBy: userId,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        });
+        
+        return { success: true, truckId: docRef.id };
+    } catch (error: any) {
+        console.error("❌ Error saving truck:", error);
+        throw error;
+    }
+};
+```
+
+### Step 15.3: Preview Implementation
+**File:** `app/admin/trucks/new/page.tsx`
+- Added state for `showPreview` and `previewData`
+- Logic to toggle between Form view and Preview view
+- `onSubmit` handler triggers `handlePreview` instead of direct save
+- `handleConfirmSave` executes the actual save transaction
+
+**File:** `app/admin/trucks/new/components/TruckPreview.tsx`
+- Used in both "Create" (preview mode) and "Truck Details" (read-only)
+- Cleaned up to show only relevant data (removed images per Section 16)
+
+---
+
+## 16. Truck List Dropdown Menu
+
+### Step 16.1: Implement Dropdown Actions
+**File:** `app/admin/trucks/page.tsx`
+- Added `DropdownMenu` component for each truck item
+- Used `Link` component from `next/link` to wrap `DropdownMenuItem` for navigation
+- Actions included:
+    - **Update**: Edit truck (links to `/admin/trucks/[id]/edit`)
+    - **Maintenance**: Placeholder for future maintenance features
+- Uses `lucide-react` icons (Edit, Wrench) for better UX
+
+### Step 16.2: Implement Dropdown link to page
+**File:** `app/admin/trucks/page.tsx`
+```tsx
+- Added link to edit page
+- Used Link component from next/link to wrap DropdownMenuItem for navigation
+- Actions included:
+    - **Update**: Edit truck (links to `/admin/trucks/[id]/edit`)
+    - **Maintenance**: Placeholder for future maintenance features
+- Uses lucide-react icons (Edit, Wrench) for better UX
+<DropdownMenu>
+    <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="h-8 w-8 p-0">
+            <span className="sr-only">Open menu</span>
+            <MoreHorizontal className="h-4 w-4" />
+        </Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+        <DropdownMenuItem asChild>
+            <Link href={`/admin/trucks/${truck.id}/edit`} className="flex items-center cursor-pointer">
+                <Edit className="mr-2 h-4 w-4" />
+                Update
+            </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem className="cursor-pointer">
+            <Wrench className="mr-2 h-4 w-4" />
+            Maintenance //todo
+        </DropdownMenuItem>
+    </DropdownMenuContent>
+</DropdownMenu>
+```
+
+---
+
+## 17. Update Truck Data
+
+### Step 17.1: Fetch Existing Data
+**File:** `app/admin/trucks/[id]/edit/EditTruckClient.tsx`
+- Uses `useParams` to get the `truckId` from the URL
+- Calls `getTruckByIdClient` to fetch truck details from Firestore
+- Populates `react-hook-form` default values with the fetched data
+- Handles "Not Found" state if truck doesn't exist
+
+### Step 17.2: Update Action
+**File:** `app/admin/trucks/new/action.client.ts`
+- Uses `updateTruckInFirestoreClient` to modify existing documents
+- Updates `updatedAt` timestamp and `updatedBy` user ID
+- Preserves existing fields while overwriting with new form data
+
+```typescript
+export const updateTruckInFirestoreClient = async (
+    truckId: string,
+    data: z.infer<typeof truckSchema>,
+    userId: string
+) => {
+    try {
+        console.log("[updateTruckInFirestoreClient] Starting update process...");
+
+        const truckData: Record<string, any> = {
+            ...data,
+            updatedAt: serverTimestamp(),
+            updatedBy: userId,
+        };
+
+        const truckRef = doc(db, "trucks", truckId);
+        await updateDoc(truckRef, truckData);
+
+        return { success: true, truckId: truckId };
+    } catch (error) {
+        console.error("❌ Error updating truck:", error);
+        throw error;
+    }
+};
+```
 

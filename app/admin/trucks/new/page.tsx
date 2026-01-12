@@ -25,14 +25,12 @@ import * as z from "zod";
 import { IdentificationSection } from "./components/IdentificationSection";
 import { VehicleDetailsSection } from "./components/VehicleDetailsSection";
 import { RegistrationSection } from "./components/RegistrationSection";
-import { PhotosSection } from "./components/PhotosSection";
 import { EngineInformationSection } from "./components/EngineCapacitySection";
 import { TruckPreview } from "./components/TruckPreview";
-import { saveNewTruckToFirestore } from "./action";
+import { saveNewTruckToFirestoreClient } from "./action.client";
 
 export default function CreateTruckPage() {
     const router = useRouter();
-    const [images, setImages] = useState<{ file: File; preview: string }[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showPreview, setShowPreview] = useState(false);
@@ -69,36 +67,20 @@ export default function CreateTruckPage() {
         setIsSubmitting(true);
         setError(null);
         try {
-            // Get token from current user
+            // Check if user is authenticated
             if (!currentUser) {
                 throw new Error("User not authenticated");
             }
 
-            const token = await currentUser.getIdToken();
-            
-            // Log form data to console
-            console.log("=== Form Submitted ===");
-            console.log("Form Data:", JSON.stringify(previewData, null, 2));
-            console.log("Images Count:", images.length);
-            if (images.length > 0) {
-                console.log("Images:", images.map(img => ({
-                    name: img.file.name,
-                    size: img.file.size,
-                    type: img.file.type,
-                    preview: img.preview
-                })));
-            }
-            console.log("====================");
-            
-            // Save truck to Firestore with token verification
-            await saveNewTruckToFirestore(previewData, images, token);
-            
+            // Save truck to Firestore using client SDK
+            await saveNewTruckToFirestoreClient(previewData, currentUser.uid);
+
             // Show success and redirect
             router.push("/admin/trucks");
         } catch (error) {
             console.error("Error saving truck:", error);
-            const errorMessage = error instanceof Error 
-                ? error.message 
+            const errorMessage = error instanceof Error
+                ? error.message
                 : "Failed to save truck. Please try again.";
             setError(errorMessage);
             setIsSubmitting(false);
@@ -177,7 +159,6 @@ export default function CreateTruckPage() {
                         )}
                         <TruckPreview
                             data={previewData}
-                            images={images}
                             onEdit={handleEdit}
                             onConfirm={handleConfirmSave}
                             onCancel={() => router.push("/admin/trucks")}
@@ -197,14 +178,14 @@ export default function CreateTruckPage() {
                             <VehicleDetailsSection />
                             <EngineInformationSection />
                             <RegistrationSection />
-                            <PhotosSection images={images} setImages={setImages} />
+                            {/* PhotosSection removed per user request */}
 
                             <div className="flex justify-end gap-4">
                                 <Button type="button" variant="outline" asChild>
                                     <Link href="/admin/trucks">{t("Cancel")}</Link>
                                 </Button>
-                                <Button 
-                                    type="submit" 
+                                <Button
+                                    type="submit"
                                     className="flex items-center gap-2"
                                     disabled={isSubmitting}
                                 >

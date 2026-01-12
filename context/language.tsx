@@ -33,7 +33,7 @@ const translations = {
         "nav.propertyStockSearch": "Property stock search",
 
         // Home
-        "home.welcome": "Welcome to Fire Home Course",
+        "home.welcome": "Welcome to Logi Track",
 
         // Auth
         "auth.login.title": "Login",
@@ -103,7 +103,7 @@ const translations = {
         "nav.propertyStockSearch": "ค้นหาคลังสินค้า",
 
         // Home
-        "home.welcome": "ยินดีต้อนรับสู่ Fire Home Course",
+        "home.welcome": "ยินดีต้อนรับสู่ Logi Track",
 
         // Auth
         "auth.login.title": "เข้าสู่ระบบ",

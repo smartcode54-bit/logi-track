@@ -6,9 +6,11 @@ import React from "react";
 interface PhotosSectionProps {
     images: { file: File; preview: string }[];
     setImages: React.Dispatch<React.SetStateAction<{ file: File; preview: string }[]>>;
+    existingImages?: string[];
+    onRemoveExistingImage?: (index: number) => void;
 }
 
-export function PhotosSection({ images, setImages }: PhotosSectionProps) {
+export function PhotosSection({ images, setImages, existingImages = [], onRemoveExistingImage }: PhotosSectionProps) {
     const { t } = useLanguage();
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,25 +55,55 @@ export function PhotosSection({ images, setImages }: PhotosSectionProps) {
         <div className="space-y-4">
             <h2 className="text-lg font-semibold text-foreground">{t("Photos")}</h2>
 
-            {/* Image Preview Grid */}
+            {/* Existing Images from Firebase */}
+            {existingImages.length > 0 && (
+                <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">{t("Existing Photos")}</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {existingImages.map((url, index) => (
+                            <div key={`existing-${index}`} className="relative group">
+                                <img
+                                    src={url}
+                                    alt={`Truck photo ${index + 1}`}
+                                    className="w-full h-32 object-cover rounded-lg border border-border"
+                                />
+                                {onRemoveExistingImage && (
+                                    <button
+                                        type="button"
+                                        onClick={() => onRemoveExistingImage(index)}
+                                        className="absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* New Images Preview Grid */}
             {images.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {images.map((image, index) => (
-                        <div key={index} className="relative group">
-                            <img
-                                src={image.preview}
-                                alt={`Truck photo ${index + 1}`}
-                                className="w-full h-32 object-cover rounded-lg border border-border"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => handleRemoveImage(index)}
-                                className="absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                                <X className="h-4 w-4" />
-                            </button>
-                        </div>
-                    ))}
+                <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">{t("New Photos")}</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {images.map((image, index) => (
+                            <div key={index} className="relative group">
+                                <img
+                                    src={image.preview}
+                                    alt={`Truck photo ${index + 1}`}
+                                    className="w-full h-32 object-cover rounded-lg border border-border"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => handleRemoveImage(index)}
+                                    className="absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             )}
 
@@ -104,3 +136,4 @@ export function PhotosSection({ images, setImages }: PhotosSectionProps) {
         </div>
     );
 }
+

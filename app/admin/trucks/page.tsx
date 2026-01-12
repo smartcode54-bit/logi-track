@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
+import { db } from "@/firebase/client";
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -21,7 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/context/language";
-import { getTrucks, TruckData } from "./actions";
+import { TruckData } from "./actions.client";
 import { formatLicensePlate } from "@/lib/utils";
 
 export default function TrucksListPage() {
@@ -31,23 +33,63 @@ export default function TrucksListPage() {
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
 
-    // Fetch trucks from Firestore
+    // Fetch trucks from Firestore with real-time listener
     useEffect(() => {
-        const fetchTrucks = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-                const data = await getTrucks();
-                setTrucks(data);
-            } catch (err) {
-                console.error("Error fetching trucks:", err);
-                setError(err instanceof Error ? err.message : "Failed to load trucks");
-            } finally {
-                setLoading(false);
-            }
-        };
+        setLoading(true);
+        const trucksRef = collection(db, "trucks");
+        const q = query(trucksRef, orderBy("createdAt", "desc"));
 
-        fetchTrucks();
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const trucksData: TruckData[] = [];
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                // Helper to format timestamp
+                const formatTimestamp = (timestamp: any): Date | null => {
+                    if (!timestamp) return null;
+                    if (timestamp.toDate) return timestamp.toDate();
+                    if (timestamp.toMillis) return new Date(timestamp.toMillis());
+                    if (timestamp.seconds) return new Date(timestamp.seconds * 1000);
+                    return timestamp;
+                };
+
+                trucksData.push({
+                    id: doc.id,
+                    licensePlate: data.licensePlate || "",
+                    province: data.province || "",
+                    vin: data.vin || "",
+                    engineNumber: data.engineNumber || "",
+                    truckStatus: data.truckStatus || "",
+                    brand: data.brand || "",
+                    model: data.model || "",
+                    year: data.year || "",
+                    color: data.color || "",
+                    type: data.type || "",
+                    seats: data.seats || "",
+                    fuelType: data.fuelType || "",
+                    engineCapacity: data.engineCapacity,
+                    fuelCapacity: data.fuelCapacity,
+                    maxLoadWeight: data.maxLoadWeight,
+                    registrationDate: data.registrationDate || "",
+                    buyingDate: data.buyingDate || "",
+                    driver: data.driver || "",
+                    notes: data.notes || "",
+                    images: data.images || [],
+                    createdBy: data.createdBy || "",
+                    createdAt: formatTimestamp(data.createdAt),
+                    updatedAt: formatTimestamp(data.updatedAt),
+                });
+            });
+            setTrucks(trucksData);
+            setLoading(false);
+            setError(null);
+        }, (err) => {
+            console.error("Error fetching trucks:", err);
+            setError(err instanceof Error ? err.message : "Failed to load trucks");
+            setLoading(false);
+        });
+
+        // Cleanup subscription
+        return () => unsubscribe();
     }, []);
 
     // Filter trucks based on search query
@@ -211,12 +253,6 @@ export default function TrucksListPage() {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                            <DropdownMenuItem asChild>
-                                                <Link href={`/admin/trucks/${truck.id}`} className="flex items-center cursor-pointer">
-                                                    <Eye className="mr-2 h-4 w-4" />
-                                                    Preview
-                                                </Link>
-                                            </DropdownMenuItem>
                                             <DropdownMenuItem asChild>
                                                 <Link href={`/admin/trucks/${truck.id}/edit`} className="flex items-center cursor-pointer">
                                                     <Edit className="mr-2 h-4 w-4" />
