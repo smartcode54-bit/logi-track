@@ -25,7 +25,7 @@ import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const { t } = useLanguage();
-  const { login } = useAuth();
+  const auth = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,10 +36,12 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      if (!login) {
+      if (!auth) {
         throw new Error("Auth context not initialized");
       }
-      await login(email, password);
+      if (auth) {
+        await auth.login(email, password);
+      }
       // Redirect handled by AuthContext or separate logic, but usually we push to dashboard
       router.push("/admin/dashboard");
       toast.success("Logged in successfully");
