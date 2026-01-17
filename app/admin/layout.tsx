@@ -50,7 +50,7 @@ export default function AdminLayout({
             icon: Truck,
             children: [
                 {
-                    title: t("Own Fleet"),
+                    title: t("Fleets"),
                     href: "/admin/trucks",
                     icon: Truck,
                 },
@@ -89,12 +89,12 @@ export default function AdminLayout({
     ];
 
     useEffect(() => {
-        if (authContext && !currentUser) {
+        if (!authContext?.loading && authContext && !currentUser) {
             router.push("/login");
         }
     }, [authContext, currentUser, router]);
 
-    if (!authContext || !currentUser) {
+    if (!authContext || authContext.loading) {
         return (
             <div className="min-h-screen bg-background flex flex-col">
                 <Navigation />
@@ -103,6 +103,10 @@ export default function AdminLayout({
                 </div>
             </div>
         );
+    }
+
+    if (!currentUser) {
+        return null; // Will redirect in useEffect
     }
 
     const renderMenuItem = (item: MenuItem, isMobile = false) => {

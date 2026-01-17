@@ -8,7 +8,10 @@
   "functions": {
     "source": "functions",
     "codebase": "logi-truck",
-    "runtime": "nodejs20"
+    "runtime": "nodejs20",
+    "predeploy": [
+      "npm --prefix \"$RESOURCE_DIR\" run build"
+    ]
   },
   "hosting": {
     "public": "out",

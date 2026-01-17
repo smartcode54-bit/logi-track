@@ -3,9 +3,9 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { subcontractorSchema, SubcontractorFormValues, SubcontractorValidatedData } from "@/validate/subcontractorSchema";
-import { createSubcontractor } from "../actions.client";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { getSubcontractorById, updateSubcontractor } from "../../actions.client";
+import { useRouter, useParams } from "next/navigation";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
     Form,
@@ -28,11 +28,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
-import FileUploader from "../components/FileUploader";
+import FileUploader from "../../components/FileUploader";
 
-export default function NewSubcontractorPage() {
+export default function SubcontractorEditClient() {
     const router = useRouter();
+    const params = useParams();
+    const id = params?.id as string;
+
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     const form = useForm<SubcontractorFormValues>({
         resolver: zodResolver(subcontractorSchema),
@@ -50,32 +54,73 @@ export default function NewSubcontractorPage() {
         },
     });
 
+    useEffect(() => {
+        const fetchData = async () => {
+            if (!id) return;
+            try {
+                const data = await getSubcontractorById(id);
+                if (data) {
+                    form.reset({
+                        name: data.name,
+                        type: (data.type as "individual" | "company") || "individual",
+                        idCardNumber: (data as any).idCardNumber || "",
+                        taxId: data.taxId || "",
+                        contactPerson: data.contactPerson,
+                        phone: data.phone,
+                        email: data.email || "",
+                        address: data.address || "",
+                        status: data.status,
+                        documents: data.documents || [],
+                    });
+                } else {
+                    toast.error("Subcontractor not found");
+                    router.push("/admin/subcontractors");
+                }
+            } catch (error) {
+                console.error("Error fetching subcontractor:", error);
+                toast.error("Failed to load subcontractor data");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [id, form, router]);
+
     const onSubmit = async (data: SubcontractorFormValues) => {
         try {
             setIsSubmitting(true);
-            await createSubcontractor(data as unknown as SubcontractorValidatedData);
-            toast.success("Subcontractor registered successfully");
-            router.push("/admin/subcontractors");
+            await updateSubcontractor(id, data as unknown as SubcontractorValidatedData);
+            toast.success("Subcontractor updated successfully");
+            router.push(`/admin/subcontractors/${id}`);
         } catch (error) {
             console.error(error);
-            toast.error("Failed to register subcontractor");
+            toast.error("Failed to update subcontractor");
         } finally {
             setIsSubmitting(false);
         }
     };
 
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+        );
+    }
+
     return (
         <div className="container mx-auto px-4 py-8">
             <div className="max-w-3xl mx-auto">
                 <Button variant="ghost" asChild className="mb-4 pl-0">
-                    <Link href="/admin/subcontractors">
+                    <Link href={`/admin/subcontractors/${id}`}>
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to List
+                        Back to Details
                     </Link>
                 </Button>
 
                 <div className="flex items-center justify-between mb-8">
-                    <h1 className="text-3xl font-bold">Register Subcontractor</h1>
+                    <h1 className="text-3xl font-bold">Edit Subcontractor</h1>
                 </div>
 
                 <Form {...form}>
@@ -92,7 +137,7 @@ export default function NewSubcontractorPage() {
                                         render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Type</FormLabel>
-                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <Select onValueChange={field.onChange} value={field.value}>
                                                     <FormControl>
                                                         <SelectTrigger>
                                                             <SelectValue placeholder="Select type" />
@@ -113,7 +158,7 @@ export default function NewSubcontractorPage() {
                                         render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Status</FormLabel>
-                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <Select onValueChange={field.onChange} value={field.value}>
                                                     <FormControl>
                                                         <SelectTrigger>
                                                             <SelectValue placeholder="Select status" />
@@ -289,8 +334,12 @@ export default function NewSubcontractorPage() {
                                 Cancel
                             </Button>
                             <Button type="submit" disabled={isSubmitting}>
-                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Register Subcontractor
+                                {isSubmitting ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Save className="mr-2 h-4 w-4" />
+                                )}
+                                Save Changes
                             </Button>
                         </div>
                     </form>

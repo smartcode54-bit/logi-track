@@ -79,7 +79,6 @@ export default function TrucksListPage() {
                     maxLoadWeight: data.maxLoadWeight,
                     registrationDate: data.registrationDate || "",
                     buyingDate: data.buyingDate || "",
-                    driver: data.driver || "",
                     notes: data.notes || "",
                     images: data.images || [],
                     createdBy: data.createdBy || "",
@@ -115,7 +114,6 @@ export default function TrucksListPage() {
             truck.licensePlate.toLowerCase().includes(query) ||
             truck.model.toLowerCase().includes(query) ||
             truck.brand.toLowerCase().includes(query) ||
-            truck.driver.toLowerCase().includes(query) ||
             truck.province.toLowerCase().includes(query)
         );
     });
@@ -292,7 +290,7 @@ export default function TrucksListPage() {
                                             {formatLicensePlate(truck.licensePlate)} ({truck.province})
                                         </h3>
                                         <p className="text-sm text-muted-foreground">
-                                            {truck.brand} {truck.model} • {truck.driver}
+                                            {truck.brand} {truck.model}
                                         </p>
                                     </div>
                                 </div>

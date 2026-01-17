@@ -237,7 +237,7 @@ export default function CreateTruckPage() {
                                                         }}
                                                         className="flex-1"
                                                     >
-                                                        Own Fleet
+                                                        Fleet
                                                     </Button>
                                                     <Button
                                                         type="button"

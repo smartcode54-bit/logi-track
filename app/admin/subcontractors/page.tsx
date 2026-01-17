@@ -13,7 +13,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 
-import { Plus, Search, Loader2, User, Building2, Phone, Eye } from "lucide-react";
+import { Plus, Search, Loader2, User, Building2, Phone, Eye, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
@@ -31,6 +31,7 @@ export default function SubcontractorsListPage() {
     const [subcontractors, setSubcontractors] = useState<SubcontractorData[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
+    const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
     useEffect(() => {
         loadData();
@@ -53,6 +54,30 @@ export default function SubcontractorsListPage() {
         sub.contactPerson.toLowerCase().includes(searchQuery.toLowerCase()) ||
         sub.phone.includes(searchQuery)
     );
+
+    const handleSort = (key: string) => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const sortedSubs = [...filteredSubs].sort((a, b) => {
+        if (!sortConfig) return 0;
+
+        let aValue: any = a[sortConfig.key as keyof SubcontractorData];
+        let bValue: any = b[sortConfig.key as keyof SubcontractorData];
+
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    const getSortIcon = (key: string) => {
+        if (!sortConfig || sortConfig.key !== key) return <ArrowUpDown className="ml-2 h-4 w-4" />;
+        return sortConfig.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />;
+    };
 
     return (
         <div className="container mx-auto px-4 py-8">
@@ -105,11 +130,27 @@ export default function SubcontractorsListPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Name</TableHead>
-                                    <TableHead>Type</TableHead>
-                                    <TableHead>Contact</TableHead>
+                                    <TableHead className="cursor-pointer" onClick={() => handleSort('name')}>
+                                        <div className="flex items-center">
+                                            Name {getSortIcon('name')}
+                                        </div>
+                                    </TableHead>
+                                    <TableHead className="cursor-pointer" onClick={() => handleSort('type')}>
+                                        <div className="flex items-center">
+                                            Type {getSortIcon('type')}
+                                        </div>
+                                    </TableHead>
+                                    <TableHead className="cursor-pointer" onClick={() => handleSort('contactPerson')}>
+                                        <div className="flex items-center">
+                                            Contact {getSortIcon('contactPerson')}
+                                        </div>
+                                    </TableHead>
                                     <TableHead>Phone / Mobile</TableHead>
-                                    <TableHead>Status</TableHead>
+                                    <TableHead className="cursor-pointer" onClick={() => handleSort('status')}>
+                                        <div className="flex items-center">
+                                            Status {getSortIcon('status')}
+                                        </div>
+                                    </TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -121,7 +162,7 @@ export default function SubcontractorsListPage() {
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    filteredSubs.map((sub) => (
+                                    sortedSubs.map((sub) => (
                                         <TableRow
                                             key={sub.id}
                                             className="cursor-pointer hover:bg-accent/50"

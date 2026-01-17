@@ -179,7 +179,7 @@ export default function AdminDashboardPage() {
                           <Truck className="h-5 w-5" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-sm">Own Fleet</h3>
+                          <h3 className="font-semibold text-sm">Fleet</h3>
                           <p className="text-xs text-muted-foreground">Manage company trucks</p>
                         </div>
                       </Link>

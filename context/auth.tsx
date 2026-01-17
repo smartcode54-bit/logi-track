@@ -15,6 +15,7 @@ type AuthContextType = {
   currentUser: User | null;
   logout: () => Promise<void>;
   customClaims: ParsedTokenResult | null;
+  loading: boolean;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -31,6 +32,7 @@ if (process.env.NODE_ENV === "development" && typeof window !== "undefined") {
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [customClaims, setCustomClaims] = useState<ParsedTokenResult | null>(null);
+  const [loading, setLoading] = useState(true);
 
 
   useEffect(() => {
@@ -69,6 +71,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } else {
         setCustomClaims(null);
       }
+      setLoading(false);
     });
     return () => unsubscribe();
   }, []);
@@ -84,7 +87,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, logout, customClaims }}>
+    <AuthContext.Provider value={{ currentUser, logout, customClaims, loading }}>
       {children}
     </AuthContext.Provider>
   );

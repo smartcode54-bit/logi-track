@@ -84,7 +84,7 @@ export default function EditTruckClient() {
         resolver: zodResolver(truckSchema) as any,
         defaultValues: {
             // Default values will be reset when data is loaded
-            isActive: true,
+            // isActive: true, // Removed as it is not in schema
             ownershipType: "own",
             subcontractorId: "",
             licensePlate: "",
@@ -94,17 +94,17 @@ export default function EditTruckClient() {
             year: String(new Date().getFullYear()),
             color: "",
             type: "",
-            headType: "",
+            // headType: "", // Removed as it is not in schema
             fuelType: "Diesel",
             engineCapacity: 0,
             fuelCapacity: 0,
             maxLoadWeight: 0,
             seats: "4",
-            mileage: 0,
+            // mileage: 0, // Removed as it is not in schema
             registrationDate: undefined,
             buyingDate: undefined,
             engineNumber: "",
-            chassisNumber: "",
+            // chassisNumber: "", // Removed as it is not in schema
             imageFrontRight: "",
             imageFrontLeft: "",
             imageBackRight: "",
