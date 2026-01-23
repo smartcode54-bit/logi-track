@@ -20,6 +20,19 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+import { Inter, Sarabun } from "next/font/google";
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+});
+
+const sarabun = Sarabun({
+  weight: ["300", "400", "500", "700"],
+  variable: "--font-sarabun",
+  subsets: ["thai", "latin"],
+});
+
 export const metadata: Metadata = {
   title: "Logi Track",
   description: "Created by SmartCode",
@@ -32,9 +45,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+      </head>
       <body
         suppressHydrationWarning
-        className={`${geistSans.variable} ${geistMono.variable} ${poppins.className} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${poppins.className} ${inter.variable} ${sarabun.variable} antialiased font-display`}
       >
         <script
           dangerouslySetInnerHTML={{

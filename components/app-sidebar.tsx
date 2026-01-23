@@ -191,7 +191,7 @@ export function AppSidebar() {
                             >
                                 <DropdownMenuItem onClick={async () => {
                                     await logout?.()
-                                    window.location.href = "/login"
+                                    window.location.href = "/"
                                 }}>
                                     <LogOut className="mr-2 h-4 w-4" />
                                     Log out
