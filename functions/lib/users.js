@@ -176,6 +176,7 @@ exports.syncExistingUsers = (0, https_1.onCall)(async (request) => {
                 role: role,
                 authCreationTime: user.metadata.creationTime || null,
                 lastLogin: user.metadata.lastSignInTime || null,
+                providerData: user.providerData.map((p) => p.providerId),
             }, { merge: true });
             count++;
         }

@@ -119,13 +119,6 @@ export function LoginModal({ children, open, onOpenChange }: LoginModalProps) {
                         </div>
                     </div>
                     <ContinueWithGoogleButton />
-
-                    <div className="text-center text-sm text-muted-foreground mt-2">
-                        {t("auth.dontHaveAccount") || "Don't have an account?"}{" "}
-                        <Link href="/waitlist" className="font-semibold text-primary hover:underline">
-                            {t("nav.register") || "Join Wait List"}
-                        </Link>
-                    </div>
                 </div>
             </DialogContent>
         </Dialog>

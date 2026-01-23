@@ -1,12 +1,15 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import ContinueWithGoogleButton from "@/components/continue-with-google-button";
 import { LoginModal } from "./LoginModal";
+import { WaitlistModal } from "./WaitlistModal";
 import { useLanguage } from "@/context/language";
 
 export function Hero() {
     const { t } = useLanguage();
+    const [loginOpen, setLoginOpen] = useState(false);
+    const [waitlistOpen, setWaitlistOpen] = useState(false);
 
     return (
         <section className="flex-grow flex items-center justify-center py-12 md:py-20 lg:px-40">
@@ -65,6 +68,21 @@ export function Hero() {
                                 <div className="flex flex-col gap-4">
                                     <ContinueWithGoogleButton />
 
+                                    <div className="text-center">
+                                        <WaitlistModal
+                                            open={waitlistOpen}
+                                            onOpenChange={setWaitlistOpen}
+                                            onSwitchToLogin={() => {
+                                                setWaitlistOpen(false);
+                                                setLoginOpen(true);
+                                            }}
+                                        >
+                                            <button className="text-sm text-primary hover:underline font-bold">
+                                                {t("auth.register.title")}
+                                            </button>
+                                        </WaitlistModal>
+                                    </div>
+
                                     <div className="relative flex items-center gap-4 py-2">
                                         <div className="h-px grow bg-slate-200 dark:bg-[#3b4754]"></div>
                                         <span className="text-xs text-slate-400 font-medium uppercase tracking-widest">
@@ -73,7 +91,7 @@ export function Hero() {
                                         <div className="h-px grow bg-slate-200 dark:bg-[#3b4754]"></div>
                                     </div>
 
-                                    <LoginModal>
+                                    <LoginModal open={loginOpen} onOpenChange={setLoginOpen}>
                                         <button className="flex w-full items-center justify-center gap-2 rounded-lg h-12 px-5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 text-sm font-semibold hover:bg-slate-200 dark:hover:bg-white/10 transition-all">
                                             <span className="material-symbols-outlined text-[20px]">
                                                 key

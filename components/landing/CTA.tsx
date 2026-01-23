@@ -1,8 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
 import { useLanguage } from "@/context/language";
+import { WaitlistModal } from "./WaitlistModal";
+import { LoginModal } from "./LoginModal";
 
 export function CTA() {
     const { t } = useLanguage();
+    const [loginOpen, setLoginOpen] = useState(false);
+    const [waitlistOpen, setWaitlistOpen] = useState(false);
 
     return (
         <section className="py-20 lg:px-40 relative overflow-hidden">
@@ -18,9 +22,19 @@ export function CTA() {
                         </p>
                     </div>
                     <div className="flex flex-wrap justify-center gap-4">
-                        <button className="flex items-center justify-center rounded-xl min-w-[220px] h-16 px-8 bg-white text-primary text-lg font-bold shadow-xl hover:bg-slate-50 transition-all">
-                            {t("landing.cta.requestDemo")}
-                        </button>
+                        <WaitlistModal
+                            open={waitlistOpen}
+                            onOpenChange={setWaitlistOpen}
+                            onSwitchToLogin={() => {
+                                setWaitlistOpen(false);
+                                setLoginOpen(true);
+                            }}
+                        >
+                            <button className="flex items-center justify-center rounded-xl min-w-[220px] h-16 px-8 bg-white text-primary text-lg font-bold shadow-xl hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all duration-300">
+                                {t("landing.cta.requestDemo")}
+                            </button>
+                        </WaitlistModal>
+                        <LoginModal open={loginOpen} onOpenChange={setLoginOpen} />
                         <button className="flex items-center justify-center rounded-xl min-w-[220px] h-16 px-8 border-2 border-white/30 bg-transparent text-white text-lg font-bold hover:bg-white/10 transition-all">
                             {t("landing.cta.viewApi")}
                         </button>
