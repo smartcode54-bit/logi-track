@@ -61,7 +61,7 @@ export function Footer() {
                     </div>
                 </div>
                 <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-slate-400 text-xs border-t border-slate-200 dark:border-[#283039] pt-8">
-                    <p>© 2024 Logi-Track Inc. {t("landing.footer.rights")}</p>
+                    <p>© 2025 Wanpen-Radchada Transport co.,ltd. {t("landing.footer.rights")}</p>
                     <div className="flex items-center gap-4">
                         <span className="flex items-center gap-1.5">
                             <span className="material-symbols-outlined text-xs">
