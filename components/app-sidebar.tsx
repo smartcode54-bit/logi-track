@@ -88,8 +88,15 @@ export function AppSidebar() {
         },
     ]
 
+    const { setOpen } = useSidebar()
+
     return (
-        <Sidebar collapsible="icon">
+        <Sidebar
+            collapsible="icon"
+            className="border-r-0"
+            onMouseEnter={() => setOpen(true)}
+            onMouseLeave={() => setOpen(false)}
+        >
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
