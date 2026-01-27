@@ -10,7 +10,10 @@ import {
     ChevronDown,
     Building2,
     LogOut,
-    User
+    User,
+    HelpCircle,
+    GitBranch,
+    Shield
 } from "lucide-react"
 
 import {
@@ -34,67 +37,54 @@ import { useLanguage } from "@/context/language"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useAuth } from "@/context/auth"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export function AppSidebar() {
     const { t } = useLanguage()
     const pathname = usePathname()
     const auth = useAuth()
-    const currentUser = auth?.currentUser
     const logout = auth?.logout
-    const { state } = useSidebar()
 
-    // Menu items structure
+    // Menu items structure based on "Logistics Pro" design
     const items = [
         {
-            title: t("nav.dashboard"),
+            title: "Dashboard",
             url: "/admin/dashboard",
             icon: LayoutDashboard,
         },
         {
-            title: t("nav.trucks"),
+            title: "Truck Management",
             icon: Truck,
             items: [
                 {
-                    title: t("nav.fleets"),
+                    title: "Fleet Overview",
                     url: "/admin/trucks",
                 },
                 {
-                    title: t("nav.subcontractors"),
+                    title: "Active Drivers",
+                    url: "/admin/drivers",
+                },
+                {
+                    title: "Subcontractors",
                     url: "/admin/subcontractors",
                 },
             ],
         },
         {
-            title: t("nav.users"),
-            url: "/admin/users",
-            icon: Users,
-        },
-        {
-            title: t("nav.waitlist"),
-            url: "/admin/waitlist",
-            icon: User,
-        },
-        {
-            title: t("nav.drivers"),
-            url: "/admin/drivers",
-            icon: Truck,
-        },
-        {
-            title: t("nav.packages"),
+            title: "Active Shipments",
             url: "/admin/packages",
-            icon: Package,
+            icon: GitBranch, // Using GitBranch to represent flow/shipments
         },
         {
-            title: t("nav.analytics"),
+            title: "User Roles",
+            url: "/admin/users",
+            icon: Shield,
+        },
+        {
+            title: "Reporting",
             url: "/admin/analytics",
             icon: BarChart3,
-        },
-        {
-            title: t("nav.settings"),
-            url: "/admin/settings",
-            icon: Settings,
         },
     ]
 
@@ -105,12 +95,12 @@ export function AppSidebar() {
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
                             <Link href="/admin/dashboard">
-                                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                                    <Truck className="size-4" />
+                                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-blue-600 text-primary-foreground">
+                                    <Truck className="size-4 text-white" />
                                 </div>
                                 <div className="grid flex-1 text-left text-sm leading-tight">
-                                    <span className="truncate font-semibold">LogiTruck</span>
-                                    <span className="truncate text-xs">Admin Panel</span>
+                                    <span className="truncate font-semibold text-base">Logistics Pro</span>
+                                    <span className="truncate text-xs text-muted-foreground">Enterprise Admin</span>
                                 </div>
                             </Link>
                         </SidebarMenuButton>
@@ -119,7 +109,7 @@ export function AppSidebar() {
             </SidebarHeader>
             <SidebarContent>
                 <SidebarGroup>
-                    <SidebarGroupLabel>{t("nav.platform")}</SidebarGroupLabel>
+                    <SidebarGroupLabel>MAIN MENU</SidebarGroupLabel>
                     <SidebarGroupContent>
                         <SidebarMenu>
                             {items.map((item) => (
@@ -160,44 +150,44 @@ export function AppSidebar() {
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
+
+                <SidebarGroup className="mt-auto">
+                    <SidebarGroupLabel>SYSTEM</SidebarGroupLabel>
+                    <SidebarGroupContent>
+                        <SidebarMenu>
+                            <SidebarMenuItem>
+                                <SidebarMenuButton asChild tooltip="Settings" isActive={pathname === "/admin/settings"}>
+                                    <Link href="/admin/settings">
+                                        <Settings />
+                                        <span>Settings</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
             </SidebarContent>
             <SidebarFooter>
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <SidebarMenuButton
-                                    size="lg"
-                                    className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-                                >
-                                    <Avatar className="h-8 w-8 rounded-lg">
-                                        <AvatarImage src={currentUser?.photoURL || ""} alt={currentUser?.displayName || "User"} />
-                                        <AvatarFallback className="rounded-lg">
-                                            {currentUser?.displayName?.slice(0, 2).toUpperCase() || "CN"}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    <div className="grid flex-1 text-left text-sm leading-tight">
-                                        <span className="truncate font-semibold">{currentUser?.displayName || "User"}</span>
-                                        <span className="truncate text-xs">{currentUser?.email}</span>
-                                    </div>
-                                    <ChevronDown className="ml-auto size-4" />
-                                </SidebarMenuButton>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                                className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-                                side="bottom"
-                                align="end"
-                                sideOffset={4}
-                            >
-                                <DropdownMenuItem onClick={async () => {
-                                    await logout?.()
-                                    window.location.href = "/"
-                                }}>
-                                    <LogOut className="mr-2 h-4 w-4" />
-                                    Log out
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        <SidebarMenuButton asChild tooltip="Support Center">
+                            <Link href="/support">
+                                <HelpCircle />
+                                <span className="text-muted-foreground">Support Center</span>
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton
+                            className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50"
+                            onClick={async () => {
+                                await logout?.()
+                                window.location.href = "/"
+                            }}
+                        >
+                            <LogOut />
+                            <span>Logout</span>
+                        </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
             </SidebarFooter>
