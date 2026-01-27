@@ -90,6 +90,12 @@ export function Header() {
                     >
                         About Us
                     </Link>
+                    <Link
+                        className="text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary text-sm font-medium transition-colors"
+                        href="/join-network"
+                    >
+                        Join Network
+                    </Link>
                 </div>
                 <div className="flex items-center gap-4">
                     <div className="flex items-center bg-slate-100 dark:bg-[#283039] rounded-full p-1 border border-slate-200 dark:border-[#3b4754]">

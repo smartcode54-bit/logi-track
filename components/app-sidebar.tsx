@@ -54,19 +54,19 @@ export function AppSidebar() {
             icon: LayoutDashboard,
         },
         {
-            title: "Truck Management",
+            title: "Fleet",
             icon: Truck,
             items: [
                 {
-                    title: "Fleet Overview",
+                    title: "Truck Management",
                     url: "/admin/trucks",
                 },
                 {
-                    title: "Active Drivers",
-                    url: "/admin/drivers",
+                    title: "Truck Assignment",
+                    url: "/admin/truck-assignment",
                 },
                 {
-                    title: "Subcontractors",
+                    title: "Manage Subcontractors",
                     url: "/admin/subcontractors",
                 },
             ],

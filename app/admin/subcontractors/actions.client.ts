@@ -28,6 +28,9 @@ export interface SubcontractorData {
     address?: string;
     status: "active" | "pending" | "suspended";
     documents?: string[];
+    fleetSize?: number; // Added
+    serviceArea?: string; // Added
+    rating?: number; // Added
     createdAt: Date | null;
     updatedAt: Date | null;
 }
@@ -61,6 +64,9 @@ export async function getSubcontractors(): Promise<SubcontractorData[]> {
                 address: data.address || "",
                 status: data.status || "active",
                 documents: data.documents || [],
+                fleetSize: data.fleetSize || 0, // Default to 0
+                serviceArea: data.serviceArea || "Unknown", // Default
+                rating: data.rating || 0, // Default
                 createdAt: formatTimestamp(data.createdAt),
                 updatedAt: formatTimestamp(data.updatedAt),
             });
@@ -119,6 +125,9 @@ export async function getSubcontractorById(id: string): Promise<SubcontractorDat
                 address: data.address || "",
                 status: data.status || "active",
                 documents: data.documents || [],
+                fleetSize: data.fleetSize || 0,
+                serviceArea: data.serviceArea || "Unknown",
+                rating: data.rating || 0,
                 createdAt: formatTimestamp(data.createdAt),
                 updatedAt: formatTimestamp(data.updatedAt),
             };

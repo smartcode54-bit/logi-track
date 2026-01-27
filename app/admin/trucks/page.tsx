@@ -1,18 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { collection, query, orderBy, onSnapshot, where, limit } from "firebase/firestore";
 import { db } from "@/firebase/client";
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
 import Link from "next/link";
-import { Truck, Home, LayoutDashboard, Plus, Search, MoreHorizontal, Loader2, Eye, Edit, Wrench } from "lucide-react";
+import {
+    Plus,
+    Search,
+    Download,
+    MoreHorizontal,
+    Loader2,
+    Eye,
+    Edit,
+    Wrench,
+    ChevronLeft,
+    ChevronRight,
+} from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -24,47 +27,50 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/context/language";
 import { TruckData } from "./actions.client";
-import { formatLicensePlate } from "@/lib/utils";
-
-import { useRouter, useSearchParams } from "next/navigation";
+import { formatLicensePlate } from "@/lib/utils"; // Assumed utility
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 
 export default function TrucksListPage() {
-    const router = useRouter();
-    const searchParams = useSearchParams();
     const { t } = useLanguage();
     const [trucks, setTrucks] = useState<TruckData[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [searchQuery, setSearchQuery] = useState("");
 
-    // Fetch trucks from Firestore with real-time listener
+    // Filters
+    const [searchQuery, setSearchQuery] = useState("");
+    const [typeFilter, setTypeFilter] = useState("all");
+    const [statusFilter, setStatusFilter] = useState("all");
+    const [groupFilter, setGroupFilter] = useState("all");
+
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
+    // Fetch trucks from Firestore
     useEffect(() => {
         setLoading(true);
         const trucksRef = collection(db, "trucks");
-
-        // Optimize: Filter server-side based on view
-        const currentView = searchParams.get("view") || "own";
-        const constraints: any[] = [orderBy("createdAt", "desc")];
-
-        // Apply server-side filtering
-        if (currentView === 'own') {
-            constraints.unshift(where("ownershipType", "==", "own"));
-        } else if (currentView === 'subcontractor') {
-            constraints.unshift(where("ownershipType", "==", "subcontractor"));
-        }
-
-        // Limit initial fetch to 50 for memory optimization
-        // (In a real app, implement infinite scroll)
-        constraints.push(limit(50));
-
-        const q = query(trucksRef, ...constraints);
+        const q = query(trucksRef, orderBy("createdAt", "desc"), limit(100)); // Limit 100 for now
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const trucksData: TruckData[] = [];
-            // console.log("Fetched trucks snapshot size:", snapshot.size);
             snapshot.forEach((doc) => {
                 const data = doc.data();
-                // Helper to format timestamp
                 const formatTimestamp = (timestamp: any): Date | null => {
                     if (!timestamp) return null;
                     if (timestamp.toDate) return timestamp.toDate();
@@ -106,273 +112,293 @@ export default function TrucksListPage() {
             setError(null);
         }, (err) => {
             console.error("Error fetching trucks:", err);
-            setError(err instanceof Error ? err.message : "Failed to load trucks");
+            setError("Failed to load trucks");
             setLoading(false);
         });
 
-        // Cleanup subscription
         return () => unsubscribe();
-    }, [searchParams]); // Re-run when view changes
+    }, []);
 
-    // Filter trucks based on search query AND ownership view
-    const view = searchParams.get("view") || "own";
+    // Unique Types for Filter
+    const uniqueTypes = useMemo(() => {
+        const types = new Set(trucks.map(t => t.type).filter(Boolean));
+        return Array.from(types);
+    }, [trucks]);
 
-    const filteredTrucks = trucks.filter((truck) => {
-        // 1. Filter by View (Ownership)
-        if (view === "own" && truck.ownershipType === "subcontractor") return false;
-        if (view === "subcontractor" && truck.ownershipType !== "subcontractor") return false;
+    // Filtering Logic
+    const filteredTrucks = useMemo(() => {
+        return trucks.filter(truck => {
+            const matchSearch =
+                truck.licensePlate.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                truck.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                truck.id.toLowerCase().includes(searchQuery.toLowerCase());
 
-        // 2. Filter by Search Query
-        if (!searchQuery) return true;
-        const query = searchQuery.toLowerCase();
-        return (
-            truck.licensePlate.toLowerCase().includes(query) ||
-            truck.model.toLowerCase().includes(query) ||
-            truck.brand.toLowerCase().includes(query) ||
-            truck.province.toLowerCase().includes(query)
-        );
-    });
+            const matchType = typeFilter === "all" || truck.type === typeFilter;
+            const matchStatus = statusFilter === "all" || truck.truckStatus === statusFilter;
+            const matchGroup = groupFilter === "all" ||
+                (groupFilter === "own" && truck.ownershipType === "own") ||
+                (groupFilter === "subcontractor" && truck.ownershipType === "subcontractor");
+
+            return matchSearch && matchType && matchStatus && matchGroup;
+        });
+    }, [trucks, searchQuery, typeFilter, statusFilter, groupFilter]);
+
+    // Pagination Logic
+    const totalPages = Math.ceil(filteredTrucks.length / itemsPerPage);
+    const paginatedTrucks = filteredTrucks.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case "active":
-                return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
-            case "inactive":
-                return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
-            case "maintenance":
-                return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
-            case "insurance-claim":
-                return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
-            case "sold":
-                return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
-            default:
-                return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
+            case "active": return "bg-green-500/10 text-green-500 hover:bg-green-500/20 border-green-500/20";
+            case "maintenance": return "bg-red-500/10 text-red-500 hover:bg-red-500/20 border-red-500/20";
+            case "in-transit": return "bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20 border-yellow-500/20"; // Example
+            case "inactive": return "bg-gray-500/10 text-gray-500 hover:bg-gray-500/20 border-gray-500/20";
+            default: return "bg-gray-500/10 text-gray-500 hover:bg-gray-500/20 border-gray-500/20";
         }
     };
 
     const getStatusLabel = (status: string) => {
         switch (status) {
-            case "active":
-                return t("trucks.status.available") || "Active";
-            case "inactive":
-                return "Inactive";
-            case "maintenance":
-                return t("trucks.status.maintenance") || "Maintenance";
-            case "insurance-claim":
-                return "Insurance Claim";
-            case "sold":
-                return "Sold";
-            default:
-                return status;
+            case "active": return "Active";
+            case "maintenance": return "Maintenance";
+            case "in-transit": return "In Transit";
+            case "inactive": return "Inactive";
+            default: return status;
         }
     };
 
-    return (
-        <div className="container mx-auto px-4 py-8">
-            <div className="max-w-7xl mx-auto">
-                {/* Breadcrumb Navigation */}
-                <Breadcrumb className="mb-6">
-                    <BreadcrumbList>
-                        <BreadcrumbItem>
-                            <BreadcrumbLink asChild>
-                                <Link href="/" className="flex items-center gap-1">
-                                    <Home className="h-4 w-4 hover:text-green-600 transition-colors" />
-                                    {t("nav.home")}
-                                </Link>
-                            </BreadcrumbLink>
-                        </BreadcrumbItem>
-                        <BreadcrumbSeparator />
-                        <BreadcrumbItem>
-                            <BreadcrumbLink asChild>
-                                <Link href="/admin/dashboard" className="flex items-center gap-1">
-                                    <LayoutDashboard className="h-4 w-4 hover:text-green-600 transition-colors" />
-                                    {t("nav.dashboard")}
-                                </Link>
-                            </BreadcrumbLink>
-                        </BreadcrumbItem>
-                        <BreadcrumbSeparator />
-                        <BreadcrumbItem>
-                            <BreadcrumbPage className="flex items-center gap-1">
-                                <Truck className="h-4 w-4 hover:text-green-600 transition-colors" />
-                                {t("trucks.title")}
-                            </BreadcrumbPage>
-                        </BreadcrumbItem>
-                    </BreadcrumbList>
-                </Breadcrumb>
+    const getOwnershipBadge = (type: string) => {
+        if (type === 'own') {
+            return <Badge variant="secondary" className="bg-blue-900/40 text-blue-400 hover:bg-blue-900/60 border-blue-800">COMPANY</Badge>;
+        }
+        return <Badge variant="secondary" className="bg-slate-800 text-slate-400 hover:bg-slate-700">PARTNER</Badge>;
+    };
 
-                {/* Page Header */}
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
-                    <div>
-                        <h1 className="text-3xl font-bold text-foreground">
-                            {t("trucks.title")}
-                        </h1>
-                        <p className="text-muted-foreground mt-1">
-                            {t("trucks.subtitle")}
-                        </p>
-                    </div>
-                    <Button asChild className="flex items-center gap-2">
+    const clearFilters = () => {
+        setSearchQuery("");
+        setTypeFilter("all");
+        setStatusFilter("all");
+        setGroupFilter("all");
+        setCurrentPage(1);
+    };
+
+    return (
+        <div className="container mx-auto p-6 space-y-6 max-w-[1600px]">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Truck Management</h1>
+                    <p className="text-muted-foreground mt-1">
+                        Monitor and manage all registered trucks in the system
+                    </p>
+                </div>
+                <div className="flex gap-3">
+                    <Button variant="outline" className="gap-2">
+                        <Download className="h-4 w-4" />
+                        Export
+                    </Button>
+                    <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white gap-2">
                         <Link href="/admin/trucks/new">
                             <Plus className="h-4 w-4" />
-                            {t("trucks.addTruck")}
+                            Add New Truck
                         </Link>
                     </Button>
                 </div>
+            </div>
 
-                {/* Search Bar */}
-                <div className="relative mb-6">
+            {/* Filter Bar */}
+            <div className="flex flex-col xl:flex-row gap-4 bg-card/50 p-4 rounded-lg border border-border/50">
+                <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder={t("trucks.searchPlaceholder") || "Search trucks..."}
-                        className="pl-10"
+                        placeholder="Search by Plate Number, ID, or Model..."
+                        className="pl-10 bg-background/50 border-border/50 focus-visible:ring-1"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
+                <div className="flex flex-wrap gap-3">
+                    <Select value={typeFilter} onValueChange={setTypeFilter}>
+                        <SelectTrigger className="w-[180px] bg-background/50 border-border/50">
+                            <SelectValue placeholder="All Types" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Types</SelectItem>
+                            {uniqueTypes.map(type => (
+                                <SelectItem key={type} value={type}>{type}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
 
-                {/* Error State */}
-                {error && (
-                    <div className="bg-destructive/15 text-destructive px-4 py-3 rounded-md border border-destructive/50 mb-6">
-                        <p className="text-sm font-medium">{error}</p>
-                    </div>
-                )}
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="w-[180px] bg-background/50 border-border/50">
+                            <SelectValue placeholder="Vehicle Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Statuses</SelectItem>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="maintenance">Maintenance</SelectItem>
+                            <SelectItem value="inactive">Inactive</SelectItem>
+                        </SelectContent>
+                    </Select>
 
-                {/* Tabs for Separation */}
-                <div className="flex gap-4 mb-6 border-b overflow-x-auto">
-                    <button
-                        onClick={() => {
-                            const params = new URLSearchParams(searchParams.toString());
-                            params.set("view", "own");
-                            router.push(`?${params.toString()}`);
-                        }}
-                        className={`pb-2 px-4 text-sm font-medium border-b-2 transition-colors ${view === "own"
-                            ? "border-primary text-primary"
-                            : "border-transparent text-muted-foreground hover:text-foreground"
-                            }`}
-                    >
-                        {t("trucks.filter.own")}
-                    </button>
-                    <button
-                        onClick={() => {
-                            const params = new URLSearchParams(searchParams.toString());
-                            params.set("view", "subcontractor");
-                            router.push(`?${params.toString()}`);
-                        }}
-                        className={`pb-2 px-4 text-sm font-medium border-b-2 transition-colors ${view === "subcontractor"
-                            ? "border-primary text-primary"
-                            : "border-transparent text-muted-foreground hover:text-foreground"
-                            }`}
-                    >
-                        {t("trucks.filter.subcontractor")}
-                    </button>
-                    <button
-                        onClick={() => {
-                            const params = new URLSearchParams(searchParams.toString());
-                            params.set("view", "all");
-                            router.push(`?${params.toString()}`);
-                        }}
-                        className={`pb-2 px-4 text-sm font-medium border-b-2 transition-colors ${view === "all"
-                            ? "border-primary text-primary"
-                            : "border-transparent text-muted-foreground hover:text-foreground"
-                            }`}
-                    >
-                        {t("trucks.filter.all")}
-                    </button>
+                    <Select value={groupFilter} onValueChange={setGroupFilter}>
+                        <SelectTrigger className="w-[180px] bg-background/50 border-border/50">
+                            <SelectValue placeholder="Fleet Group" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Groups</SelectItem>
+                            <SelectItem value="own">Company Fleet</SelectItem>
+                            <SelectItem value="subcontractor">Partner Fleet</SelectItem>
+                        </SelectContent>
+                    </Select>
+
+                    <Button variant="ghost" className="text-blue-500 hover:text-blue-600 hover:bg-blue-500/10" onClick={clearFilters}>
+                        Clear Filters
+                    </Button>
                 </div>
+            </div>
 
-                {/* Loading State */}
-                {loading && (
-                    <div className="flex items-center justify-center py-12">
-                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                        <span className="ml-2 text-muted-foreground">Loading trucks...</span>
-                    </div>
-                )}
-
-                {/* Trucks List */}
-                {!loading && !error && (
-                    <div className="space-y-2">
-                        {filteredTrucks.map((truck) => (
-                            <div
-                                key={truck.id}
-                                onClick={() => router.push(`/admin/trucks/${truck.id}`)}
-                                className="group flex flex-col md:flex-row items-start md:items-center justify-between p-4 rounded-lg border border-border bg-card hover:bg-accent hover:border-accent-foreground/20 transition-all duration-200 cursor-pointer gap-4"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary">
-                                        <Truck className="w-5 h-5" />
+            {/* Content */}
+            <div className="border rounded-lg bg-card overflow-hidden">
+                <Table>
+                    <TableHeader className="bg-muted/50">
+                        <TableRow className="hover:bg-transparent border-b border-border/50">
+                            <TableHead className="w-[100px] text-xs font-semibold tracking-wider text-muted-foreground uppercase">ID</TableHead>
+                            <TableHead className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Plate Number</TableHead>
+                            <TableHead className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Model</TableHead>
+                            <TableHead className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Ownership</TableHead>
+                            <TableHead className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Status</TableHead>
+                            <TableHead className="text-right text-xs font-semibold tracking-wider text-muted-foreground uppercase">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {loading ? (
+                            <TableRow>
+                                <TableCell colSpan={6} className="h-32 text-center">
+                                    <div className="flex flex-col items-center justify-center gap-2">
+                                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                                        <p className="text-sm text-muted-foreground">Loading trucks...</p>
                                     </div>
-                                    <div>
-                                        <h3 className="font-medium text-foreground">
-                                            {formatLicensePlate(truck.licensePlate)} ({truck.province})
-                                        </h3>
-                                        <p className="text-sm text-muted-foreground">
-                                            {truck.brand} {truck.model}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-6">
-                                    <div className="text-sm text-muted-foreground">
-                                        {truck.type}
-                                    </div>
-                                    <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(truck.truckStatus)}`}>
-                                        {getStatusLabel(truck.truckStatus)}
-                                    </span>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                                <span className="sr-only">Open menu</span>
-                                                <MoreHorizontal className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-
-                                            <DropdownMenuItem asChild>
-                                                <Link href={`/admin/trucks/${truck.id}`} className="flex items-center cursor-pointer">
-                                                    <Eye className="mr-2 h-4 w-4" />
-                                                    Preview
-                                                </Link>
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem asChild>
-                                                <Link href={`/admin/trucks/${truck.id}/edit`} className="flex items-center cursor-pointer">
-                                                    <Edit className="mr-2 h-4 w-4" />
-                                                    Update
-                                                </Link>
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem className="cursor-pointer">
-                                                <Wrench className="mr-2 h-4 w-4" />
-                                                Maintenance
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-                {/* Empty State */}
-                {!loading && !error && filteredTrucks.length === 0 && (
-                    <div className="text-center py-12">
-                        <Truck className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <h3 className="text-lg font-medium text-foreground mb-2">
-                            {searchQuery ? "No trucks found" : t("trucks.noTrucks") || "No trucks yet"}
-                        </h3>
-                        <p className="text-muted-foreground mb-4">
-                            {searchQuery
-                                ? "Try adjusting your search query"
-                                : t("trucks.getStarted") || "Get started by adding your first truck"
-                            }
-                        </p>
-                        {!searchQuery && (
-                            <Button asChild>
-                                <Link href="/admin/trucks/new">
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    {t("trucks.addTruck") || "Add Truck"}
-                                </Link>
-                            </Button>
+                                </TableCell>
+                            </TableRow>
+                        ) : paginatedTrucks.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={6} className="h-32 text-center">
+                                    <p className="text-sm text-muted-foreground">No trucks found matching your filters.</p>
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            paginatedTrucks.map((truck) => (
+                                <TableRow key={truck.id} className="cursor-pointer hover:bg-muted/50 transition-colors border-b border-border/50" onClick={() => window.location.href = `/admin/trucks/${truck.id}`}>
+                                    <TableCell className="font-mono text-sm text-muted-foreground">
+                                        {truck.id.slice(0, 8).toUpperCase()}
+                                    </TableCell>
+                                    <TableCell className="font-bold text-base">
+                                        {formatLicensePlate(truck.licensePlate)}
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-medium">{truck.model}</span>
+                                            <span className="text-xs text-muted-foreground">{truck.brand}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        {getOwnershipBadge(truck.ownershipType)}
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(truck.truckStatus)}`}>
+                                            <span className={`w-1.5 h-1.5 rounded-full bg-current`} />
+                                            {getStatusLabel(truck.truckStatus)}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                                <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-muted">
+                                                    <span className="sr-only">Open menu</span>
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                <DropdownMenuItem asChild>
+                                                    <Link href={`/admin/trucks/${truck.id}`} className="flex items-center cursor-pointer">
+                                                        <Eye className="mr-2 h-4 w-4" />
+                                                        View Details
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem asChild>
+                                                    <Link href={`/admin/trucks/${truck.id}/edit`} className="flex items-center cursor-pointer">
+                                                        <Edit className="mr-2 h-4 w-4" />
+                                                        Edit Truck
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem className="cursor-pointer">
+                                                    <Wrench className="mr-2 h-4 w-4" />
+                                                    Record Maintenance
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                </TableRow>
+                            ))
                         )}
+                    </TableBody>
+                </Table>
+
+                {/* Pagination */}
+                <div className="flex items-center justify-between px-4 py-4 border-t border-border/50 bg-muted/20">
+                    <div className="text-sm text-muted-foreground">
+                        Showing {paginatedTrucks.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} to {Math.min(currentPage * itemsPerPage, filteredTrucks.length)} of {filteredTrucks.length} entries
                     </div>
-                )}
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <div className="flex items-center gap-1">
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                // Simple logic to show first 5 pages or context window
+                                // For now, just show first 5 if total > 5 is complicated without component
+                                let pageNum = i + 1;
+                                if (totalPages > 5 && currentPage > 3) {
+                                    pageNum = currentPage - 2 + i;
+                                    if (pageNum > totalPages) pageNum = totalPages - (4 - i);
+                                }
+
+                                return (
+                                    <Button
+                                        key={pageNum}
+                                        variant={currentPage === pageNum ? "default" : "outline"}
+                                        size="sm"
+                                        className={`h-8 w-8 p-0 ${currentPage === pageNum ? "bg-blue-600 hover:bg-blue-700" : ""}`}
+                                        onClick={() => setCurrentPage(pageNum)}
+                                    >
+                                        {pageNum}
+                                    </Button>
+                                );
+                            })}
+                        </div>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages || totalPages === 0}
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
             </div>
         </div>
     );
