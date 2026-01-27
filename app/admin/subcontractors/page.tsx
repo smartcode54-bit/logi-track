@@ -124,9 +124,8 @@ export default function SubcontractorManagementPage() {
             // @ts-ignore
             let bValue = b[sortConfig.key];
 
-            // Handle undefined/null
-            if (aValue === undefined) aValue = "";
-            if (bValue === undefined) bValue = "";
+            if (aValue === undefined || aValue === null) aValue = "";
+            if (bValue === undefined || bValue === null) bValue = "";
 
             if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
             if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;

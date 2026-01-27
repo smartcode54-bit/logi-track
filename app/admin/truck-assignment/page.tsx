@@ -54,7 +54,8 @@ import {
 import { useAuth } from "@/context/auth";
 
 export default function TruckAssignmentPage() {
-    const { currentUser } = useAuth();
+    const auth = useAuth();
+    const currentUser = auth?.currentUser;
     const [stats, setStats] = useState({
         totalTrucks: 0,
         availableDrivers: 0,

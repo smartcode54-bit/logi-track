@@ -25,7 +25,18 @@ export const subcontractorSchema = z.object({
     contactPerson: z.string().min(1, "Contact person is required"),
     phone: z.string().min(1, "Phone is required"),
     email: z.string().email("Invalid email").optional().or(z.literal("")),
+    website: z.string().url("Invalid URL").optional().or(z.literal("")),
     address: z.string().optional(),
+
+    // Contact Details Extra
+    designation: z.string().optional(),
+
+    // Fleet & Service
+    fleetSize: z.coerce.number().min(0).default(0),
+    dispatchCenter: z.string().optional(),
+    serviceRegions: z.array(z.string()).default([]),
+    vehicleTypes: z.array(z.string()).default([]),
+
     status: z.enum(["active", "pending", "suspended"]).default("active"),
 
     documents: z.array(z.string()).optional(),
@@ -60,7 +71,13 @@ export const subcontractorDefaultValues: SubcontractorFormValues = {
     contactPerson: "",
     phone: "",
     email: "",
+    website: "",
     address: "",
+    designation: "",
+    fleetSize: 0,
+    dispatchCenter: "",
+    serviceRegions: [],
+    vehicleTypes: [],
     status: "active",
     documents: [],
 };
