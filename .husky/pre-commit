@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# Check if .vibe-rules.md was modified in this commit
+if ! git diff --cached --name-only | grep -q ".vibe-rules.md"; then
+  echo ""
+  echo "⚠️  REMINDER: .vibe-rules.md was NOT updated!"
+  echo "   Please update the Change Log before committing."
+  echo ""
+  echo "   To skip this check (emergency only): git commit --no-verify"
+  echo ""
+  # Uncomment the next line to BLOCK commits without .vibe-rules.md update
+  # exit 1
+fi
