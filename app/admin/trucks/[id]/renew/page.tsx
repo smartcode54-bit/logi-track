@@ -174,12 +174,14 @@ function RenewalForm({ type, truck, onSuccess }: { type: "tax" | "insurance", tr
         setUploadedDocs(prev => prev.filter((_, i) => i !== index));
     };
 
-    const handleSave = async (e: React.FormEvent, targetStatus?: string) => {
+    type StatusType = "pending" | "completed" | "in_progress";
+
+    const handleSave = async (e: React.FormEvent, targetStatus?: StatusType) => {
         e.preventDefault();
         if (!currentUser) return;
 
         setIsSubmitting(true);
-        const nextStatus = targetStatus || status;
+        const nextStatus: StatusType = targetStatus || status;
 
         try {
             // Upload file if selected
