@@ -1,14 +1,44 @@
 #!/bin/sh
 
 # Check if .vibe-rules.md was modified in this commit
-if ! git diff --cached --name-only | grep -q ".vibe-rules.md"; then
-  echo ""
-  echo "❌ BLOCKED: .vibe-rules.md was NOT updated!"
-  echo "   You MUST update the Change Log before committing."
-  echo ""
-  echo "   To skip this check (emergency only): git commit --no-verify"
-  echo ""
+if git diff --cached --name-only | grep -q ".vibe-rules.md"; then
+  echo "✅ .vibe-rules.md is updated. Proceeding with commit..."
+  exit 0
+fi
+
+echo ""
+echo "⚠️  .vibe-rules.md was NOT updated!"
+echo ""
+
+# Get today's date
+TODAY=$(date +%Y-%m-%d)
+
+# Get list of changed files (excluding .vibe-rules.md itself)
+CHANGED_FILES=$(git diff --cached --name-only | head -5 | tr '\n' ', ' | sed 's/,$//')
+
+echo "📝 Changed files: $CHANGED_FILES"
+echo ""
+echo "Enter changelog description (or 'skip' to bypass):"
+read DESCRIPTION
+
+if [ "$DESCRIPTION" = "skip" ]; then
+  echo "⏭️  Skipping changelog update..."
+  exit 0
+fi
+
+if [ -z "$DESCRIPTION" ]; then
+  echo "❌ No description provided. Commit aborted."
   exit 1
 fi
 
-echo "✅ .vibe-rules.md is updated. Proceeding with commit..."
+# Append to changelog in .vibe-rules.md
+# Find the line after the changelog table header and insert new entry
+ENTRY="| $TODAY | $DESCRIPTION | Updated files: $CHANGED_FILES |"
+
+# Use PowerShell to insert the line (Windows compatible)
+powershell -Command "(Get-Content '.vibe-rules.md') | ForEach-Object { if (\$_ -match '^\| 2026-') { \$found = \$true }; if (\$found -and \$_ -eq '') { '$ENTRY'; \$found = \$false }; \$_ } | Set-Content '.vibe-rules.md'"
+
+# Stage the updated file
+git add .vibe-rules.md
+
+echo "✅ Changelog updated and staged. Proceeding with commit..."
