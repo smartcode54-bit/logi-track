@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { collection, query, orderBy, onSnapshot, where, limit } from "firebase/firestore";
 import { db } from "@/firebase/client";
 import { COLLECTIONS } from "@/lib/collections";
@@ -17,6 +18,8 @@ import {
     Wrench,
     ChevronLeft,
     ChevronRight,
+    FileText,
+    ShieldAlert,
 } from "lucide-react";
 import {
     DropdownMenu,
@@ -27,9 +30,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useLanguage } from "@/context/language";
 import { TruckData } from "./actions.client";
-import { formatLicensePlate } from "@/lib/utils"; // Assumed utility
+import { formatLicensePlate } from "@/lib/utils";
 import {
     Table,
     TableBody,
@@ -49,6 +53,7 @@ import { Badge } from "@/components/ui/badge";
 
 export default function TrucksListPage() {
     const { t } = useLanguage();
+    const router = useRouter();
     const [trucks, setTrucks] = useState<TruckData[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -115,6 +120,10 @@ export default function TrucksListPage() {
                     createdBy: data.createdBy || "",
                     createdAt: formatTimestamp(data.createdAt),
                     updatedAt: formatTimestamp(data.updatedAt),
+
+                    // Renewal Status Mappings
+                    taxRenewalStatus: data.taxRenewalStatus,
+                    insuranceRenewalStatus: data.insuranceRenewalStatus,
                 });
             });
             setTrucks(trucksData);
@@ -332,6 +341,7 @@ export default function TrucksListPage() {
                             <TableHead className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Plate Number</TableHead>
                             <TableHead className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Model</TableHead>
                             <TableHead className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Ownership</TableHead>
+                            <TableHead className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Tax/Insu.</TableHead>
                             <TableHead className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Status</TableHead>
                             <TableHead className="text-right text-xs font-semibold tracking-wider text-muted-foreground uppercase">Actions</TableHead>
                         </TableRow>
@@ -354,7 +364,7 @@ export default function TrucksListPage() {
                             </TableRow>
                         ) : (
                             paginatedTrucks.map((truck) => (
-                                <TableRow key={truck.id} className="cursor-pointer hover:bg-muted/50 transition-colors border-b border-border/50" onClick={() => window.location.href = `/admin/trucks/${truck.id}`}>
+                                <TableRow key={truck.id} className="cursor-pointer hover:bg-muted/50 transition-colors border-b border-border/50" onClick={() => router.push(`/admin/trucks/${truck.id}`)}>
                                     <TableCell className="font-mono text-sm text-muted-foreground">
                                         {truck.id.slice(0, 8).toUpperCase()}
                                     </TableCell>
@@ -369,6 +379,90 @@ export default function TrucksListPage() {
                                     </TableCell>
                                     <TableCell>
                                         {getOwnershipBadge(truck.ownershipType)}
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-col gap-1">
+                                            {(() => {
+                                                // Check if both Tax and Insurance are completed - show single OK
+                                                const taxCompleted = truck.taxRenewalStatus === 'completed';
+                                                const insuranceCompleted = truck.insuranceRenewalStatus === 'completed';
+
+                                                // Collect non-completed badges
+                                                const badges: JSX.Element[] = [];
+
+                                                // Tax Status (only show badge if NOT completed)
+                                                if (truck.taxExpiryDate && !taxCompleted) {
+                                                    let taxBadge: JSX.Element | null = null;
+                                                    if (truck.taxRenewalStatus === 'in_progress') {
+                                                        taxBadge = <Badge variant="secondary" className="text-[10px] px-1 py-0 h-5 w-fit bg-blue-100 text-blue-700 border-blue-200">Tax: In-process</Badge>;
+                                                    } else {
+                                                        const days = Math.ceil((new Date(truck.taxExpiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                                                        if (days < 0) taxBadge = <Badge variant="destructive" className="text-[10px] px-1 py-0 h-5 w-fit">Tax: Overdue</Badge>;
+                                                        else if (days <= 30) taxBadge = <Badge variant="outline" className="text-[10px] px-1 py-0 h-5 w-fit text-orange-600 border-orange-600 bg-orange-50">Tax: {days}d</Badge>;
+                                                        else if (days <= 60) taxBadge = <Badge variant="outline" className="text-[10px] px-1 py-0 h-5 w-fit text-blue-600 border-blue-600 bg-blue-50">Tax: {days}d</Badge>;
+                                                    }
+                                                    if (taxBadge) {
+                                                        const tooltipText = truck.taxRenewalStatus === 'in_progress' ? "Update Progress" : "Renew Now";
+                                                        badges.push(
+                                                            <TooltipProvider key="tax">
+                                                                <Tooltip>
+                                                                    <TooltipTrigger asChild>
+                                                                        <Link href={`/admin/trucks/${truck.id}/renew?type=tax`} onClick={(e) => e.stopPropagation()} className="hover:opacity-80 transition-opacity w-fit">
+                                                                            {taxBadge}
+                                                                        </Link>
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent>
+                                                                        <p>{tooltipText}</p>
+                                                                    </TooltipContent>
+                                                                </Tooltip>
+                                                            </TooltipProvider>
+                                                        );
+                                                    }
+                                                }
+
+                                                // Insurance Status (only show badge if NOT completed)
+                                                if (truck.insuranceExpiryDate && !insuranceCompleted) {
+                                                    let insuBadge: JSX.Element | null = null;
+                                                    if (truck.insuranceRenewalStatus === 'in_progress') {
+                                                        insuBadge = <Badge variant="secondary" className="text-[10px] px-1 py-0 h-5 w-fit bg-purple-100 text-purple-700 border-purple-200">Insu: In-process</Badge>;
+                                                    } else {
+                                                        const days = Math.ceil((new Date(truck.insuranceExpiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                                                        if (days < 0) insuBadge = <Badge variant="destructive" className="text-[10px] px-1 py-0 h-5 w-fit">Insu: Overdue</Badge>;
+                                                        else if (days <= 30) insuBadge = <Badge variant="outline" className="text-[10px] px-1 py-0 h-5 w-fit text-orange-600 border-orange-600 bg-orange-50">Insu: {days}d</Badge>;
+                                                        else if (days <= 60) insuBadge = <Badge variant="outline" className="text-[10px] px-1 py-0 h-5 w-fit text-blue-600 border-blue-600 bg-blue-50">Insu: {days}d</Badge>;
+                                                    }
+                                                    if (insuBadge) {
+                                                        const tooltipText = truck.insuranceRenewalStatus === 'in_progress' ? "Update Progress" : "Renew Now";
+                                                        badges.push(
+                                                            <TooltipProvider key="insu">
+                                                                <Tooltip>
+                                                                    <TooltipTrigger asChild>
+                                                                        <Link href={`/admin/trucks/${truck.id}/renew?type=insurance`} onClick={(e) => e.stopPropagation()} className="hover:opacity-80 transition-opacity w-fit">
+                                                                            {insuBadge}
+                                                                        </Link>
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent>
+                                                                        <p>{tooltipText}</p>
+                                                                    </TooltipContent>
+                                                                </Tooltip>
+                                                            </TooltipProvider>
+                                                        );
+                                                    }
+                                                }
+
+                                                // If there are badges to show, render them
+                                                if (badges.length > 0) {
+                                                    return badges;
+                                                }
+
+                                                // Otherwise show single OK (both completed or no issues)
+                                                return (
+                                                    <span className="text-xs text-green-600 flex items-center gap-1">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500" /> OK
+                                                    </span>
+                                                );
+                                            })()}
+                                        </div>
                                     </TableCell>
                                     <TableCell>
                                         <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(truck.truckStatus)}`}>
@@ -387,17 +481,37 @@ export default function TrucksListPage() {
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                 <DropdownMenuItem asChild>
-                                                    <Link href={`/admin/trucks/${truck.id}`} className="flex items-center cursor-pointer">
+                                                    <Link href={`/admin/trucks/${truck.id}`} className="flex items-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
                                                         <Eye className="mr-2 h-4 w-4" />
                                                         View Details
                                                     </Link>
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem asChild>
-                                                    <Link href={`/admin/trucks/${truck.id}/edit`} className="flex items-center cursor-pointer">
+                                                    <Link href={`/admin/trucks/${truck.id}/edit`} className="flex items-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
                                                         <Edit className="mr-2 h-4 w-4" />
                                                         Edit Truck
                                                     </Link>
                                                 </DropdownMenuItem>
+
+                                                {/* Renew Actions - Only show if needed */}
+                                                {truck.taxExpiryDate && (new Date(truck.taxExpiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24) <= 60 && (
+                                                    <DropdownMenuItem asChild>
+                                                        <Link href={`/admin/trucks/${truck.id}/renew?type=tax`} className="flex items-center cursor-pointer text-orange-600 focus:text-orange-700" onClick={(e) => e.stopPropagation()}>
+                                                            <FileText className="mr-2 h-4 w-4" />
+                                                            Renew - TAX
+                                                        </Link>
+                                                    </DropdownMenuItem>
+                                                )}
+
+                                                {truck.insuranceExpiryDate && (new Date(truck.insuranceExpiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24) <= 60 && (
+                                                    <DropdownMenuItem asChild>
+                                                        <Link href={`/admin/trucks/${truck.id}/renew?type=insurance`} className="flex items-center cursor-pointer text-blue-600 focus:text-blue-700" onClick={(e) => e.stopPropagation()}>
+                                                            <ShieldAlert className="mr-2 h-4 w-4" />
+                                                            Renew - Insurance
+                                                        </Link>
+                                                    </DropdownMenuItem>
+                                                )}
+
                                                 <DropdownMenuItem className="cursor-pointer">
                                                     <Wrench className="mr-2 h-4 w-4" />
                                                     Record Maintenance

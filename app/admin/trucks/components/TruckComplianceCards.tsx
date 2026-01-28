@@ -205,6 +205,13 @@ function ComplianceCard({ title, icon, stats, type, activeFilter, onCardClick }:
                     </div>
                 </div>
             </CardContent>
-        </Card>
+            {/* Responsibility Footer */}
+            <div className="bg-muted/30 px-4 py-2 border-t text-xs text-muted-foreground flex justify-between items-center">
+                <span>Action Owner:</span>
+                <span className="font-medium text-foreground">
+                    {type === 'service' ? "Assigned Driver" : "Operation Admin"}
+                </span>
+            </div>
+        </Card >
     );
 }

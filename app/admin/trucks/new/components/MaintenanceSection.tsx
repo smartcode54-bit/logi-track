@@ -6,13 +6,12 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useFormContext } from "react-hook-form";
 import { useLanguage } from "@/context/language";
-import { FileText } from "lucide-react";
+import { Wrench } from "lucide-react";
 
-export function RegistrationSection() {
+export function MaintenanceSection() {
     const { control } = useFormContext();
     const { t } = useLanguage();
 
@@ -20,18 +19,18 @@ export function RegistrationSection() {
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-primary" />
-                    {t("Registration")}
+                    <Wrench className="h-5 w-5 text-primary" />
+                    {t("Maintenance Book")}
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
                         control={control}
-                        name="taxExpiryDate"
+                        name="lastServiceDate"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>{t("Tax (Act) Expiry Date")}</FormLabel>
+                                <FormLabel>{t("Last Service Date")}</FormLabel>
                                 <FormControl>
                                     <Input type="date" {...field} />
                                 </FormControl>
@@ -41,10 +40,10 @@ export function RegistrationSection() {
                     />
                     <FormField
                         control={control}
-                        name="registrationDate"
+                        name="nextServiceDate"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>{t("registration Date")}</FormLabel>
+                                <FormLabel>{t("Next Service Date")}</FormLabel>
                                 <FormControl>
                                     <Input type="date" {...field} />
                                 </FormControl>
@@ -54,54 +53,41 @@ export function RegistrationSection() {
                     />
                     <FormField
                         control={control}
-                        name="buyingDate"
+                        name="nextServiceMileage"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>{t("buying Date")}</FormLabel>
+                                <FormLabel>{t("Next Service Mileage (km)")}</FormLabel>
                                 <FormControl>
-                                    <Input type="date" {...field} />
+                                    <Input
+                                        type="number"
+                                        placeholder="e.g., 50000"
+                                        {...field}
+                                        onChange={(e) => {
+                                            const val = e.target.value === "" ? undefined : Number(e.target.value);
+                                            field.onChange(val);
+                                        }}
+                                        value={field.value ?? ""}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={control}
+                        name="maintenanceResponsible"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>{t("Responsible Person (Service)")}</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="e.g. Driver Name" {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}
                     />
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                        control={control}
-                        name="taxResponsible"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>{t("Responsible Person (Tax)")}</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="e.g. Admin Name" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </div>
-
-                <FormField
-                    control={control}
-                    name="notes"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>{t("notes")}</FormLabel>
-                            <FormControl>
-                                <Textarea
-                                    placeholder="Additional notes about this truck..."
-                                    rows={4}
-                                    {...field}
-                                />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
             </CardContent>
         </Card>
     );
 }
-

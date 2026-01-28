@@ -32,6 +32,7 @@ import { IdentificationSection } from "../../new/components/IdentificationSectio
 import { VehicleDetailsSection } from "../../new/components/VehicleDetailsSection";
 import { RegistrationSection } from "../../new/components/RegistrationSection";
 import { EngineInformationSection } from "../../new/components/EngineCapacitySection";
+import { MaintenanceSection } from "../../new/components/MaintenanceSection";
 import { PhotosSection } from "../../new/components/PhotosSection";
 import { InsuranceSection } from "../../new/components/InsuranceSection";
 import { updateTruckInFirestoreClient, uploadTruckFile } from "../../new/action.client";
@@ -338,6 +339,7 @@ export default function EditTruckClient() {
                         <IdentificationSection />
                         <VehicleDetailsSection />
                         <EngineInformationSection />
+                        <MaintenanceSection />
                         <RegistrationSection />
                         <InsuranceSection onFileSelect={handleFileSelect} />
                         <PhotosSection onFileSelect={handleFileSelect} />

@@ -87,6 +87,17 @@ export const truckSchema = z.object({
     insurancePremium: optionalNumber(0, 1000000, "Premium"), // maps to premium
     insuranceDocuments: z.array(z.string()).optional(), // maps to documents
     insuranceNotes: z.string().optional(), // maps to notes
+
+    // Responsibility Assignment
+    taxResponsible: z.string().optional().default("Operation Admin"),
+    maintenanceResponsible: z.string().optional().default("Driver"),
+
+    // Renewal Workflow Fields
+    taxRenewalStatus: z.enum(["pending", "in_progress", "completed"]).optional(),
+    insuranceRenewalStatus: z.enum(["pending", "in_progress", "completed"]).optional(),
+    taxExpense: optionalNumber(0, 1000000, "Tax Expense"),
+    taxReceipt: z.string().optional(), // URL to uploaded receipt
+    insuranceReceipt: z.string().optional(), // URL to uploaded receipt
 }).superRefine((data, ctx) => {
     // Conditional validation: images and documents required for own fleet only
     if (data.ownershipType === "own") {
@@ -177,4 +188,11 @@ export const truckDefaultValues: TruckFormValues = {
     nextServiceDate: "",
     nextServiceMileage: undefined,
     currentMileage: 0,
+
+    // Renewal Defaults
+    taxRenewalStatus: undefined,
+    insuranceRenewalStatus: undefined,
+    taxExpense: undefined,
+    taxReceipt: "",
+    insuranceReceipt: "",
 };

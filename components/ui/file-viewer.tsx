@@ -166,7 +166,7 @@ export function FileViewer({ isOpen, onClose, files, initialIndex = 0 }: FileVie
                             transition: isDragging ? 'none' : 'transform 0.2s ease-out',
                             cursor: scale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default'
                         }}
-                        className="relative w-full h-full flex items-center justify-center p-8"
+                        className="flex items-center justify-center"
                     >
                         {/* We use standard img tag here for better direct manipulation capabilities vs next/image in this specific interactive context, 
                             though next/image could also work with wrapper divs. */}
@@ -174,7 +174,12 @@ export function FileViewer({ isOpen, onClose, files, initialIndex = 0 }: FileVie
                         <img
                             src={currentFile.url}
                             alt={currentFile.label}
-                            className="max-w-full max-h-full object-contain pointer-events-none"
+                            style={{
+                                maxWidth: '90vw',
+                                maxHeight: '85vh',
+                                objectFit: 'contain'
+                            }}
+                            className="pointer-events-none"
                             draggable={false}
                         />
                     </div>

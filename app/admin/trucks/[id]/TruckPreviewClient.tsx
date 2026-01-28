@@ -226,6 +226,10 @@ export default function TruckPreviewClient() {
                         <CardContent>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-12">
                                 <div className="flex justify-between py-2 border-b">
+                                    <span className="text-sm text-muted-foreground">License Plate Province</span>
+                                    <span className="text-sm font-medium">{truck.province}</span>
+                                </div>
+                                <div className="flex justify-between py-2 border-b">
                                     <span className="text-sm text-muted-foreground">Engine Number</span>
                                     <span className="text-sm font-medium font-mono">{truck.engineNumber}</span>
                                 </div>
@@ -234,19 +238,88 @@ export default function TruckPreviewClient() {
                                     <span className="text-sm font-medium font-mono">{truck.vin}</span>
                                 </div>
                                 <div className="flex justify-between py-2 border-b">
+                                    <span className="text-sm text-muted-foreground">Engine Capacity</span>
+                                    <span className="text-sm font-medium">{truck.engineCapacity ? `${truck.engineCapacity.toLocaleString()} cc` : "-"}</span>
+                                </div>
+                                <div className="flex justify-between py-2 border-b">
+                                    <span className="text-sm text-muted-foreground">Fuel Capacity</span>
+                                    <span className="text-sm font-medium">{truck.fuelCapacity ? `${truck.fuelCapacity.toLocaleString()} L` : "-"}</span>
+                                </div>
+                                <div className="flex justify-between py-2 border-b">
                                     <span className="text-sm text-muted-foreground">Registration Date</span>
                                     <span className="text-sm font-medium">{formatDate(truck.registrationDate)}</span>
                                 </div>
+                                <div className="flex justify-between py-2 border-b">
+                                    <span className="text-sm text-muted-foreground">Buying Date</span>
+                                    <span className="text-sm font-medium">{formatDate(truck.buyingDate)}</span>
+                                </div>
                                 <div className="flex justify-between py-2 border-b items-center">
-                                    <span className="text-sm text-muted-foreground">Insurance Expiry</span>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm font-medium text-red-600">{formatDate(truck.insuranceExpiryDate)}</span>
-                                        {truck.insuranceExpiryDate && (
-                                            <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-100 text-[10px] h-5 px-1.5 rounded-sm">
-                                                90 DAYS
-                                            </Badge>
-                                        )}
-                                    </div>
+                                    <span className="text-sm text-muted-foreground">Tax (Act) Expiry</span>
+                                    <span className="text-sm font-medium">{formatDate(truck.taxExpiryDate)}</span>
+                                </div>
+                                <div className="flex justify-between py-2 border-b items-center">
+                                    <span className="text-sm text-muted-foreground">Tax Renewal Status</span>
+                                    {(() => {
+                                        const status = truck.taxRenewalStatus || 'pending';
+                                        if (status === 'completed') {
+                                            return <Badge className="bg-green-100 text-green-700 border-green-200 hover:bg-green-100">Completed</Badge>;
+                                        }
+                                        if (status === 'in_progress') {
+                                            return <Badge className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100">In Progress</Badge>;
+                                        }
+                                        return <Badge variant="outline" className="capitalize">Pending</Badge>;
+                                    })()}
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Insurance & Renewal Details */}
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                                <Shield className="h-5 w-5 text-blue-600" />
+                                Insurance & Renewal Details
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-12">
+                                <div className="flex justify-between py-2 border-b">
+                                    <span className="text-sm text-muted-foreground">Insurance Provider</span>
+                                    <span className="text-sm font-medium">{truck.insuranceCompany || "-"}</span>
+                                </div>
+                                <div className="flex justify-between py-2 border-b">
+                                    <span className="text-sm text-muted-foreground">Policy Number</span>
+                                    <span className="text-sm font-medium">{truck.insurancePolicyNumber || "-"}</span>
+                                </div>
+                                <div className="flex justify-between py-2 border-b">
+                                    <span className="text-sm text-muted-foreground">Type</span>
+                                    <span className="text-sm font-medium">{truck.insuranceType ? `Type ${truck.insuranceType}` : "-"}</span>
+                                </div>
+                                <div className="flex justify-between py-2 border-b">
+                                    <span className="text-sm text-muted-foreground">Premium</span>
+                                    <span className="text-sm font-medium">{truck.insurancePremium ? `${truck.insurancePremium.toLocaleString()} THB` : "-"}</span>
+                                </div>
+                                <div className="flex justify-between py-2 border-b">
+                                    <span className="text-sm text-muted-foreground">Start Date</span>
+                                    <span className="text-sm font-medium">{formatDate(truck.insuranceStartDate)}</span>
+                                </div>
+                                <div className="flex justify-between py-2 border-b items-center">
+                                    <span className="text-sm text-muted-foreground">End Date</span>
+                                    <span className="text-sm font-medium">{formatDate(truck.insuranceExpiryDate)}</span>
+                                </div>
+                                <div className="flex justify-between py-2 border-b items-center">
+                                    <span className="text-sm text-muted-foreground">Renewal Status</span>
+                                    {(() => {
+                                        const status = truck.insuranceRenewalStatus || 'pending';
+                                        if (status === 'completed') {
+                                            return <Badge className="bg-green-100 text-green-700 border-green-200 hover:bg-green-100">Completed</Badge>;
+                                        }
+                                        if (status === 'in_progress') {
+                                            return <Badge className="bg-purple-100 text-purple-700 border-purple-200 hover:bg-purple-100">In Progress</Badge>;
+                                        }
+                                        return <Badge variant="outline" className="capitalize">Pending</Badge>;
+                                    })()}
                                 </div>
                             </div>
                         </CardContent>
@@ -370,6 +443,78 @@ export default function TruckPreviewClient() {
                                     </div>
                                 ))}
                             </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* TAX Document */}
+                    <Card>
+                        <CardHeader className="pb-3 border-b">
+                            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                                <FileText className="h-5 w-5 text-blue-600" />
+                                TAX Document
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-4">
+                            {truck.documentTax ? (
+                                <div
+                                    className="relative aspect-[4/3] rounded-md overflow-hidden bg-muted cursor-pointer"
+                                    onClick={() => handleFileClick(truck.documentTax!)}
+                                >
+                                    {truck.documentTax.toLowerCase().endsWith('.pdf') ? (
+                                        <div className="flex flex-col items-center justify-center h-full bg-muted">
+                                            <FileText className="h-12 w-12 text-blue-600 mb-2" />
+                                            <span className="text-sm font-medium text-blue-600">View Tax Document</span>
+                                        </div>
+                                    ) : (
+                                        <Image
+                                            src={truck.documentTax}
+                                            alt="Tax Document"
+                                            fill
+                                            className="object-cover"
+                                        />
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-center aspect-[4/3] rounded-md bg-muted/50">
+                                    <p className="text-sm text-red-500 font-medium">TAX image or file for view</p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Insurance Document */}
+                    <Card>
+                        <CardHeader className="pb-3 border-b">
+                            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                                <Shield className="h-5 w-5 text-blue-600" />
+                                Insurance Document
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-4">
+                            {(truck.insuranceDocuments && truck.insuranceDocuments.length > 0) ? (
+                                <div
+                                    className="relative aspect-[4/3] rounded-md overflow-hidden bg-muted cursor-pointer"
+                                    onClick={() => handleFileClick(truck.insuranceDocuments![0])}
+                                >
+                                    {truck.insuranceDocuments[0].toLowerCase().endsWith('.pdf') ? (
+                                        <div className="flex flex-col items-center justify-center h-full bg-muted">
+                                            <FileText className="h-12 w-12 text-blue-600 mb-2" />
+                                            <span className="text-sm font-medium text-blue-600">View Insurance Document</span>
+                                        </div>
+                                    ) : (
+                                        <Image
+                                            src={truck.insuranceDocuments[0]}
+                                            alt="Insurance Document"
+                                            fill
+                                            className="object-cover"
+                                        />
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-center aspect-[4/3] rounded-md bg-muted/50">
+                                    <p className="text-sm text-red-500 font-medium">Insurance image or file for view</p>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </div>

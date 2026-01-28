@@ -56,6 +56,17 @@ export interface TruckData {
     nextServiceMileage?: number;
     currentMileage?: number;
 
+    // Responsibility
+    taxResponsible?: string;
+    maintenanceResponsible?: string;
+
+    // Renewal Fields
+    taxRenewalStatus?: "pending" | "in_progress" | "completed";
+    insuranceRenewalStatus?: "pending" | "in_progress" | "completed";
+    taxExpense?: number;
+    taxReceipt?: string;
+    insuranceReceipt?: string;
+
     createdBy: string;
     createdAt: Date | null;
     updatedAt: Date | null;
@@ -139,6 +150,13 @@ export async function getTrucksClient(): Promise<TruckData[]> {
                 nextServiceMileage: data.nextServiceMileage,
                 currentMileage: data.currentMileage,
 
+                // Renewal Fields
+                taxRenewalStatus: data.taxRenewalStatus,
+                insuranceRenewalStatus: data.insuranceRenewalStatus,
+                taxExpense: data.taxExpense,
+                taxReceipt: data.taxReceipt,
+                insuranceReceipt: data.insuranceReceipt,
+
                 createdBy: data.createdBy || "",
                 createdAt: formatTimestamp(data.createdAt),
                 updatedAt: formatTimestamp(data.updatedAt),
@@ -214,6 +232,17 @@ export async function getTruckByIdClient(id: string): Promise<TruckData | null> 
             nextServiceDate: data.nextServiceDate || "",
             nextServiceMileage: data.nextServiceMileage,
             currentMileage: data.currentMileage,
+
+            // Responsibility
+            taxResponsible: data.taxResponsible || "Operation Admin",
+            maintenanceResponsible: data.maintenanceResponsible || "Driver",
+
+            // Renewal Fields
+            taxRenewalStatus: data.taxRenewalStatus,
+            insuranceRenewalStatus: data.insuranceRenewalStatus,
+            taxExpense: data.taxExpense,
+            taxReceipt: data.taxReceipt,
+            insuranceReceipt: data.insuranceReceipt,
 
             createdBy: data.createdBy || "",
             createdAt: formatTimestamp(data.createdAt),
