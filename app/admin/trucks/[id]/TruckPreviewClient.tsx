@@ -167,9 +167,11 @@ export default function TruckPreviewClient() {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
-                        <Wrench className="h-4 w-4" />
-                        Service Report
+                    <Button asChild variant="outline" className="gap-2 bg-yellow-600 hover:bg-yellow-700 text-white">
+                        <Link href={`/admin/trucks/${truck.id}/maintenance`}>
+                            <Wrench className="h-4 w-4" />
+                            Maintenance
+                        </Link>
                     </Button>
                     <Button asChild className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
                         <Link href={`/admin/trucks/${truck.id}/edit`}>
