@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, type ReactNode, JSX } from "react";
 import { useRouter } from "next/navigation";
 import { collection, query, orderBy, onSnapshot, where, limit } from "firebase/firestore";
 import { db } from "@/firebase/client";
@@ -388,11 +388,11 @@ export default function TrucksListPage() {
                                                 const insuranceCompleted = truck.insuranceRenewalStatus === 'completed';
 
                                                 // Collect non-completed badges
-                                                const badges: JSX.Element[] = [];
+                                                const badges: ReactNode[] = [];
 
                                                 // Tax Status (only show badge if NOT completed)
                                                 if (truck.taxExpiryDate && !taxCompleted) {
-                                                    let taxBadge: JSX.Element | null = null;
+                                                    let taxBadge: ReactNode = null;
                                                     if (truck.taxRenewalStatus === 'in_progress') {
                                                         taxBadge = <Badge variant="secondary" className="text-[10px] px-1 py-0 h-5 w-fit bg-blue-100 text-blue-700 border-blue-200">Tax: In-process</Badge>;
                                                     } else {
@@ -422,7 +422,7 @@ export default function TrucksListPage() {
 
                                                 // Insurance Status (only show badge if NOT completed)
                                                 if (truck.insuranceExpiryDate && !insuranceCompleted) {
-                                                    let insuBadge: JSX.Element | null = null;
+                                                    let insuBadge: ReactNode = null;
                                                     if (truck.insuranceRenewalStatus === 'in_progress') {
                                                         insuBadge = <Badge variant="secondary" className="text-[10px] px-1 py-0 h-5 w-fit bg-purple-100 text-purple-700 border-purple-200">Insu: In-process</Badge>;
                                                     } else {
