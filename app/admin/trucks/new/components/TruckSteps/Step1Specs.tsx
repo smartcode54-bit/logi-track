@@ -30,4 +30,4 @@ export function Step1Specs({ onFileSelect }: Step1Props) {
     );
 }
 
-//test husky auto update vibe-rules.md-2
+//test husky auto update vibe-rules.md-5

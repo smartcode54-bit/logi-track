@@ -6,8 +6,9 @@ if git diff --cached --name-only | grep -q ".vibe-rules.md"; then
   exit 0
 fi
 
-# Get the date and changed files
+# Get the date, time, and changed files
 TODAY=$(date +%Y-%m-%d)
+TIME=$(date +%H:%M:%S)
 CHANGED_FILES=$(git diff --cached --name-only | head -3 | tr '\n' ', ' | sed 's/,$//')
 
 # Auto-generate description based on changed files
@@ -25,32 +26,34 @@ fi
 
 echo ""
 echo "📝 Auto-updating .vibe-rules.md changelog..."
-echo "   Entry: | $TODAY | $DESCRIPTION | $CHANGED_FILES |"
+echo "   Entry: | $TODAY $TIME | $DESCRIPTION | $CHANGED_FILES |"
 
-# Create temp file with new entry - simpler approach for Windows
-ENTRY="| $TODAY | $DESCRIPTION | $CHANGED_FILES |"
-
-# Use sed to append after the last dated changelog line
-sed -i "/^| 202.*|$/a\\$ENTRY" .vibe-rules.md 2>/dev/null || {
-  # Fallback: Use PowerShell if sed fails
-  powershell -NoProfile -Command "
-    \$file = '.vibe-rules.md'
-    \$content = Get-Content \$file
-    \$entry = '| $TODAY | $DESCRIPTION | $CHANGED_FILES |'
-    \$output = @()
-    \$inserted = \$false
-    for (\$i = 0; \$i -lt \$content.Length; \$i++) {
-      \$output += \$content[\$i]
-      if (-not \$inserted -and \$content[\$i] -match '^\\| 202' -and (\$i+1 -ge \$content.Length -or \$content[\$i+1] -notmatch '^\\| 202')) {
-        \$output += \$entry
-        \$inserted = \$true
+# Use PowerShell to append entry after last dated line
+powershell -NoProfile -Command "
+  \$file = '.vibe-rules.md'
+  \$lines = Get-Content \$file
+  \$entry = '| $TODAY $TIME | $DESCRIPTION | $CHANGED_FILES |'
+  \$lastIndex = -1
+  
+  for (\$i = 0; \$i -lt \$lines.Length; \$i++) {
+    if (\$lines[\$i] -match '^\| 202') {
+      \$lastIndex = \$i
+    }
+  }
+  
+  if (\$lastIndex -ge 0) {
+    \$newLines = [System.Collections.ArrayList]@()
+    for (\$i = 0; \$i -lt \$lines.Length; \$i++) {
+      [void]\$newLines.Add(\$lines[\$i])
+      if (\$i -eq \$lastIndex) {
+        [void]\$newLines.Add(\$entry)
       }
     }
-    \$output | Set-Content \$file
-  "
-}
+    \$newLines | Set-Content \$file
+  }
+"
 
 # Stage the updated file
 git add .vibe-rules.md
 
-echo "✅ Changelog auto-updated and staged!"
+echo "✅ Changelog auto-updated with timestamp!"
