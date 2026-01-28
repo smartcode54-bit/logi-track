@@ -117,7 +117,8 @@ export default function RenewalPage() {
 function RenewalForm({ type, truck, onSuccess }: { type: "tax" | "insurance", truck: TruckData, onSuccess: () => void }) {
     const { t } = useLanguage();
     const router = useRouter();
-    const { currentUser } = useAuth();
+    const auth = useAuth();
+    const currentUser = auth?.currentUser;
 
     // Initial Values based on Store
     const initialStatus = type === 'tax' ? (truck.taxRenewalStatus || "pending") : (truck.insuranceRenewalStatus || "pending");

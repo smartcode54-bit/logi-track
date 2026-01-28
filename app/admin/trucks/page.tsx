@@ -512,9 +512,11 @@ export default function TrucksListPage() {
                                                     </DropdownMenuItem>
                                                 )}
 
-                                                <DropdownMenuItem className="cursor-pointer">
-                                                    <Wrench className="mr-2 h-4 w-4" />
-                                                    Record Maintenance
+                                                <DropdownMenuItem asChild>
+                                                    <Link href={`/admin/trucks/${truck.id}/maintenance`} className="flex items-center cursor-pointer text-yellow-600 focus:text-yellow-700" onClick={(e) => e.stopPropagation()}>
+                                                        <Wrench className="mr-2 h-4 w-4" />
+                                                        Record Maintenance
+                                                    </Link>
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
