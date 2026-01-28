@@ -3,6 +3,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { collection, query, orderBy, onSnapshot, where, limit } from "firebase/firestore";
 import { db } from "@/firebase/client";
+import { COLLECTIONS } from "@/lib/collections";
+import { TruckComplianceCards } from "./components/TruckComplianceCards";
 import Link from "next/link";
 import {
     Plus,
@@ -56,6 +58,7 @@ export default function TrucksListPage() {
     const [typeFilter, setTypeFilter] = useState("all");
     const [statusFilter, setStatusFilter] = useState("all");
     const [groupFilter, setGroupFilter] = useState("all");
+    const [complianceFilter, setComplianceFilter] = useState<{ type: string | null; status: string | null }>({ type: null, status: null });
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -64,7 +67,7 @@ export default function TrucksListPage() {
     // Fetch trucks from Firestore
     useEffect(() => {
         setLoading(true);
-        const trucksRef = collection(db, "trucks");
+        const trucksRef = collection(db, COLLECTIONS.TRUCKS);
         const q = query(trucksRef, orderBy("createdAt", "desc"), limit(100)); // Limit 100 for now
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -102,6 +105,13 @@ export default function TrucksListPage() {
                     buyingDate: data.buyingDate || "",
                     notes: data.notes || "",
                     images: data.images || [],
+                    // Compliance Mapping
+                    taxExpiryDate: data.taxExpiryDate,
+                    insuranceExpiryDate: data.insuranceExpiryDate,
+                    lastServiceDate: data.lastServiceDate,
+                    nextServiceDate: data.nextServiceDate,
+                    nextServiceMileage: data.nextServiceMileage,
+                    currentMileage: data.currentMileage,
                     createdBy: data.createdBy || "",
                     createdAt: formatTimestamp(data.createdAt),
                     updatedAt: formatTimestamp(data.updatedAt),
@@ -139,9 +149,57 @@ export default function TrucksListPage() {
                 (groupFilter === "own" && truck.ownershipType === "own") ||
                 (groupFilter === "subcontractor" && truck.ownershipType === "subcontractor");
 
-            return matchSearch && matchType && matchStatus && matchGroup;
+            let matchCompliance = true;
+            if (complianceFilter.type && complianceFilter.status) {
+                const now = new Date();
+                const warningThresholdDays = 30;
+                const incomingThresholdDays = 60;
+                const warningThresholdKm = 2000; // User specified 2000km criteria
+                const incomingThresholdKm = 5000;
+
+                const getDaysDiff = (dateStr?: string) => {
+                    if (!dateStr) return 999;
+                    return Math.ceil((new Date(dateStr).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                };
+
+                const checkStatus = (days: number, kms?: number) => {
+                    if (complianceFilter.status === "overdue") {
+                        return days < 0 || (kms !== undefined && kms < 0);
+                    }
+                    if (complianceFilter.status === "expiring") {
+                        return (days >= 0 && days <= warningThresholdDays) || (kms !== undefined && kms >= 0 && kms <= warningThresholdKm);
+                    }
+                    if (complianceFilter.status === "incoming") {
+                        return (days > warningThresholdDays && days <= incomingThresholdDays) ||
+                            (kms !== undefined && kms > warningThresholdKm && kms <= incomingThresholdKm);
+                    }
+                    return false;
+                };
+
+                if (complianceFilter.type === "tax") {
+                    matchCompliance = checkStatus(getDaysDiff(truck.taxExpiryDate));
+                } else if (complianceFilter.type === "insurance") {
+                    matchCompliance = checkStatus(getDaysDiff(truck.insuranceExpiryDate));
+                } else if (complianceFilter.type === "service") {
+                    const days = getDaysDiff(truck.nextServiceDate);
+                    let kms: number | undefined = undefined;
+                    if (truck.nextServiceMileage && truck.currentMileage !== undefined) {
+                        kms = truck.nextServiceMileage - truck.currentMileage;
+                    }
+
+                    // Service is special: it matches if EITHER date OR km is in the range
+                    // But we only want to show it if it actually has service data
+                    if (truck.nextServiceDate || truck.nextServiceMileage) {
+                        matchCompliance = checkStatus(days, kms);
+                    } else {
+                        matchCompliance = false;
+                    }
+                }
+            }
+
+            return matchSearch && matchType && matchStatus && matchGroup && matchCompliance;
         });
-    }, [trucks, searchQuery, typeFilter, statusFilter, groupFilter]);
+    }, [trucks, searchQuery, typeFilter, statusFilter, groupFilter, complianceFilter]);
 
     // Pagination Logic
     const totalPages = Math.ceil(filteredTrucks.length / itemsPerPage);
@@ -208,6 +266,9 @@ export default function TrucksListPage() {
                     </Button>
                 </div>
             </div>
+
+            {/* Compliance Cards */}
+            <TruckComplianceCards onFilterChange={setComplianceFilter} />
 
             {/* Filter Bar */}
             <div className="flex flex-col xl:flex-row gap-4 bg-card/50 p-4 rounded-lg border border-border/50">

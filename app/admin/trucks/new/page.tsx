@@ -68,13 +68,18 @@ export default function CreateTruckPage() {
 
         // Validate fields based on current step
         if (currentStep === 1) {
-            fieldsToValidate = ["brand", "model", "year", "type", "vin", "licensePlate", "province", "ownershipType"];
+            // Validate all Identification and Vehicle Detail fields
+            fieldsToValidate = [
+                "licensePlate", "province", "vin", "engineNumber", "truckStatus", // From IdentificationSection
+                "brand", "model", "year", "color", "type", "seats", // From VehicleDetailsSection
+                "ownershipType"
+            ];
             if (ownershipType === 'subcontractor') fieldsToValidate.push("subcontractorId");
         } else if (currentStep === 2 && ownershipType === 'own') {
             // Only validate strict compliance for owned trucks
             fieldsToValidate = ["documentTax", "documentRegister"];
         } else if (currentStep === 3 && ownershipType === 'own') {
-            fieldsToValidate = ["engineNumber", "truckStatus", "engineCapacity", "fuelCapacity", "maxLoadWeight"];
+            fieldsToValidate = ["fuelType", "engineCapacity", "fuelCapacity", "maxLoadWeight"]; // From EngineInformationSection
         }
 
         const isValid = await trigger(fieldsToValidate);

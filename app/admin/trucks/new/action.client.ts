@@ -1,5 +1,6 @@
 import { db, storage } from "@/firebase/client"; // Added storage
 import { collection, doc, addDoc, updateDoc, serverTimestamp, query, where, getDocs, limit } from "firebase/firestore";
+import { COLLECTIONS } from "@/lib/collections";
 import { truckSchema } from "@/validate/truckSchema";
 import * as z from "zod";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -17,7 +18,7 @@ export const uploadTruckFile = async (file: File, path: string): Promise<string>
 
 export const checkLicensePlateExists = async (licensePlate: string): Promise<boolean> => {
     try {
-        const trucksRef = collection(db, "trucks");
+        const trucksRef = collection(db, COLLECTIONS.TRUCKS);
         const q = query(trucksRef, where("licensePlate", "==", licensePlate), limit(1));
         const querySnapshot = await getDocs(q);
         return !querySnapshot.empty;
@@ -51,7 +52,7 @@ export const saveNewTruckToFirestoreClient = async (
 
         // Create the truck document
         console.log("[saveNewTruckToFirestoreClient] Creating truck document...");
-        const trucksRef = collection(db, "trucks");
+        const trucksRef = collection(db, COLLECTIONS.TRUCKS);
         const docRef = await addDoc(trucksRef, {
             ...sanitizedData,
             createdBy: userId,
@@ -95,7 +96,7 @@ export const updateTruckInFirestoreClient = async (
         };
 
         console.log("[updateTruckInFirestoreClient] Updating truck in Firestore...");
-        const truckRef = doc(db, "trucks", truckId);
+        const truckRef = doc(db, COLLECTIONS.TRUCKS, truckId);
         await updateDoc(truckRef, truckData);
 
         console.log("✅ Truck updated successfully:", {

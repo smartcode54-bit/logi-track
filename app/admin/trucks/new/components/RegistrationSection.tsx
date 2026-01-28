@@ -28,6 +28,19 @@ export function RegistrationSection() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
                         control={control}
+                        name="taxExpiryDate"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>{t("Tax (Act) Expiry Date")}</FormLabel>
+                                <FormControl>
+                                    <Input type="date" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={control}
                         name="registrationDate"
                         render={({ field }) => (
                             <FormItem>

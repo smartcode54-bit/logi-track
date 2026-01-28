@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
 import { db } from "@/firebase/client";
+import { COLLECTIONS } from "@/lib/collections";
 import { useAuth } from "@/context/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -90,7 +91,7 @@ export default function AdminUsersPage() {
         if (!currentUser) return;
 
         setLoading(true);
-        const usersRef = collection(db, "users");
+        const usersRef = collection(db, COLLECTIONS.USERS);
         // Order by lastLogin if available, otherwise uid
         const q = query(usersRef, orderBy("lastLogin", "desc"), limit(limitCount));
 

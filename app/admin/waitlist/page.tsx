@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { collection, query, orderBy, onSnapshot, deleteDoc, doc } from "firebase/firestore";
 import { db } from "@/firebase/client";
+import { COLLECTIONS } from "@/lib/collections";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -21,7 +22,7 @@ export default function AdminWaitlistPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const q = query(collection(db, "waitlist"), orderBy("createdAt", "desc"));
+        const q = query(collection(db, COLLECTIONS.WAITLIST), orderBy("createdAt", "desc"));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs.map(doc => ({
                 id: doc.id,
@@ -42,7 +43,7 @@ export default function AdminWaitlistPage() {
         if (!confirm(`Are you sure you want to remove ${email} from the waitlist?`)) return;
 
         try {
-            await deleteDoc(doc(db, "waitlist", id));
+            await deleteDoc(doc(db, COLLECTIONS.WAITLIST, id));
             toast.success("Entry removed");
         } catch (error) {
             console.error("Error deleting entry:", error);

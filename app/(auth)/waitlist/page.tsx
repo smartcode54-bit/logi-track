@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { Loader2, Mail } from "lucide-react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/firebase/client";
+import { COLLECTIONS } from "@/lib/collections";
 
 export default function WaitlistPage() {
   const [email, setEmail] = useState("");
@@ -36,7 +37,7 @@ export default function WaitlistPage() {
         return;
       }
 
-      await addDoc(collection(db, "waitlist"), {
+      await addDoc(collection(db, COLLECTIONS.WAITLIST), {
         email,
         createdAt: serverTimestamp(),
       });

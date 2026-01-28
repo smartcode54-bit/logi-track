@@ -1,5 +1,6 @@
 import { db } from "@/firebase/client";
 import { collection, query, where, getDocs, addDoc, orderBy, limit, Timestamp } from "firebase/firestore";
+import { COLLECTIONS } from "@/lib/collections";
 
 export interface AssignmentData {
     id: string;
@@ -31,7 +32,7 @@ export interface TruckOption {
 export async function getActiveAssignments(): Promise<AssignmentData[]> {
     try {
         const q = query(
-            collection(db, "assignments"),
+            collection(db, COLLECTIONS.ASSIGNMENTS),
             where("status", "==", "active"),
             orderBy("createdAt", "desc")
         );
@@ -51,7 +52,7 @@ export async function getActiveAssignments(): Promise<AssignmentData[]> {
 export async function getRecentHistory(): Promise<AssignmentData[]> {
     try {
         const q = query(
-            collection(db, "assignments"),
+            collection(db, COLLECTIONS.ASSIGNMENTS),
             orderBy("createdAt", "desc"),
             limit(20)
         );
@@ -72,7 +73,7 @@ export async function getAvailableDrivers(): Promise<DriverOption[]> {
     try {
         // Fetch users with role 'driver' (assuming 'role' field exists on user doc)
         // Adjust query if customClaims structure is strictly needed, but client SDK usually queries doc fields
-        const q = query(collection(db, "users"), where("role", "==", "driver"));
+        const q = query(collection(db, COLLECTIONS.USERS), where("role", "==", "driver"));
         const snapshot = await getDocs(q);
 
         // In a real app, we'd cross-reference with active assignments to mark status
@@ -91,7 +92,7 @@ export async function getAvailableDrivers(): Promise<DriverOption[]> {
 
 export async function getAvailableTrucks(): Promise<TruckOption[]> {
     try {
-        const q = query(collection(db, "trucks"), where("truckStatus", "==", "active"));
+        const q = query(collection(db, COLLECTIONS.TRUCKS), where("truckStatus", "==", "active"));
         const snapshot = await getDocs(q);
 
         return snapshot.docs.map(doc => ({
@@ -108,7 +109,7 @@ export async function getAvailableTrucks(): Promise<TruckOption[]> {
 
 export async function createAssignment(data: Omit<AssignmentData, "id" | "createdAt" | "status">) {
     try {
-        const docRef = await addDoc(collection(db, "assignments"), {
+        const docRef = await addDoc(collection(db, COLLECTIONS.ASSIGNMENTS), {
             ...data,
             status: 'active',
             createdAt: Timestamp.now()

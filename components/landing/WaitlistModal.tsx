@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { Loader2, Mail } from "lucide-react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/firebase/client";
+import { COLLECTIONS } from "@/lib/collections";
 
 interface WaitlistModalProps {
     children?: React.ReactNode;
@@ -42,7 +43,7 @@ export function WaitlistModal({ children, open, onOpenChange, onSwitchToLogin }:
                 return;
             }
 
-            await addDoc(collection(db, "waitlist"), {
+            await addDoc(collection(db, COLLECTIONS.WAITLIST), {
                 email,
                 createdAt: serverTimestamp(),
             });

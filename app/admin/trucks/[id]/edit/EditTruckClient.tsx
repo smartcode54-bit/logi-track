@@ -135,9 +135,16 @@ export default function EditTruckClient() {
                     // Cast/Transform to form values
                     const formValues: any = {
                         ...truckData,
-                        // Ensure dates are dates
-                        registrationDate: truckData.registrationDate ? new Date(truckData.registrationDate) : undefined,
-                        buyingDate: truckData.buyingDate ? new Date(truckData.buyingDate) : undefined,
+                        // Ensure dates are valid strings or undefined
+                        // If they are Firestore Timestamps, they handle conversion in actions.client.ts
+                        // We rely on getTruckByIdClient returning strings for dates.
+                        registrationDate: truckData.registrationDate || undefined,
+                        buyingDate: truckData.buyingDate || undefined,
+                        taxExpiryDate: truckData.taxExpiryDate || undefined,
+                        lastServiceDate: truckData.lastServiceDate || undefined,
+                        nextServiceDate: truckData.nextServiceDate || undefined,
+                        insuranceStartDate: truckData.insuranceStartDate || undefined,
+                        insuranceExpiryDate: truckData.insuranceExpiryDate || undefined,
                     };
 
                     form.reset(formValues);

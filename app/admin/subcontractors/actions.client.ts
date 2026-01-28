@@ -2,6 +2,7 @@
 
 import { db, storage } from "@/firebase/client";
 import { collection, doc, getDocs, getDoc, setDoc, updateDoc, deleteDoc, query, orderBy, Timestamp } from "firebase/firestore";
+import { COLLECTIONS } from "@/lib/collections";
 import { SubcontractorValidatedData } from "@/validate/subcontractorSchema";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
@@ -45,7 +46,7 @@ const formatTimestamp = (timestamp: any): Date | null => {
 
 export async function getSubcontractors(): Promise<SubcontractorData[]> {
     try {
-        const subRef = collection(db, "subcontractors");
+        const subRef = collection(db, COLLECTIONS.SUBCONTRACTORS);
         const q = query(subRef, orderBy("createdAt", "desc"));
         const snapshot = await getDocs(q);
 
@@ -80,7 +81,7 @@ export async function getSubcontractors(): Promise<SubcontractorData[]> {
 
 export async function createSubcontractor(data: SubcontractorValidatedData): Promise<string> {
     try {
-        const subRef = doc(collection(db, "subcontractors"));
+        const subRef = doc(collection(db, COLLECTIONS.SUBCONTRACTORS));
         await setDoc(subRef, {
             ...data,
             createdAt: Timestamp.now(),
@@ -95,7 +96,7 @@ export async function createSubcontractor(data: SubcontractorValidatedData): Pro
 
 export async function updateSubcontractor(id: string, data: SubcontractorValidatedData): Promise<void> {
     try {
-        const subRef = doc(db, "subcontractors", id);
+        const subRef = doc(db, COLLECTIONS.SUBCONTRACTORS, id);
         await updateDoc(subRef, {
             ...data,
             updatedAt: Timestamp.now(),
@@ -108,7 +109,7 @@ export async function updateSubcontractor(id: string, data: SubcontractorValidat
 
 export async function getSubcontractorById(id: string): Promise<SubcontractorData | null> {
     try {
-        const subRef = doc(db, "subcontractors", id);
+        const subRef = doc(db, COLLECTIONS.SUBCONTRACTORS, id);
         const docSnap = await getDoc(subRef);
 
         if (docSnap.exists()) {

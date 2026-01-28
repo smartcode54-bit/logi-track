@@ -1,7 +1,11 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Edit, Truck, Calendar, User, FileText, Info, Loader2, Camera } from "lucide-react";
+import {
+    ArrowLeft, Edit, Truck, Calendar, User, FileText, Info, Loader2, Camera,
+    MapPin, Phone, Shield, MoreHorizontal, Download, Plus,
+    Wrench
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,11 +14,14 @@ import Image from "next/image";
 import { getTruckByIdClient, TruckData } from "../actions.client";
 import { FileViewer } from "@/components/ui/file-viewer";
 import { getSubcontractors } from "../../subcontractors/actions.client";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useBreadcrumb } from "@/context/breadcrumb";
 
 export default function TruckPreviewClient() {
     const params = useParams();
     const router = useRouter();
     const truckId = params.id as string;
+    const { setCustomLastItem } = useBreadcrumb();
 
     const [truck, setTruck] = useState<TruckData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -35,6 +42,7 @@ export default function TruckPreviewClient() {
                     return;
                 }
                 setTruck(data);
+                setCustomLastItem(`Truck ${data.licensePlate}`);
             } catch (err) {
                 console.error("Error fetching truck:", err);
                 setError(err instanceof Error ? err.message : "Failed to load truck data.");
@@ -46,14 +54,19 @@ export default function TruckPreviewClient() {
         if (truckId) {
             fetchTruck();
         }
-    }, [truckId]);
+
+        // Cleanup breadcrumb on unmount
+        return () => {
+            setCustomLastItem(null);
+        };
+    }, [truckId, setCustomLastItem]);
 
     // Fetch subcontractors to resolve names
     useEffect(() => {
         getSubcontractors().then(setSubcontractors);
     }, []);
 
-    const formatDate = (date: Date | string | null) => {
+    const formatDate = (date: Date | string | null | undefined) => {
         if (!date) return "-";
         return new Date(date).toLocaleDateString("th-TH", {
             year: "numeric",
@@ -136,360 +149,229 @@ export default function TruckPreviewClient() {
     };
 
     return (
-        <div className="container mx-auto px-4 py-8 max-w-5xl">
+        <div className="container mx-auto p-6 space-y-6 max-w-[1600px]">
             {/* Header */}
-            <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-4">
-                    <Button variant="outline" size="icon" asChild>
-                        <Link href="/admin/trucks">
-                            <ArrowLeft className="h-4 w-4" />
-                        </Link>
-                    </Button>
-                    <div>
-                        <h1 className="text-2xl font-bold flex items-center gap-3">
-                            {truck.licensePlate}
-                            <StatusBadge status={truck.truckStatus} />
-                        </h1>
-                        <p className="text-muted-foreground">
-                            {truck.brand} {truck.model} • {truck.province}
-                        </p>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <div className="flex items-center gap-3 mb-1">
+                        <h1 className="text-3xl font-bold tracking-tight">{truck.licensePlate}</h1>
+                        <StatusBadge status={truck.truckStatus} />
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                            <Info className="h-3.5 w-3.5" />
+                            Last updated: {truck.updatedAt ? new Date(truck.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "2 hours ago"}
+                        </span>
+                        <span>•</span>
+                        <span>System ID: {truck.id.substring(0, 8).toUpperCase()}</span>
                     </div>
                 </div>
-                <Button asChild>
-                    <Link href={`/admin/trucks/${truck.id}/edit`}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit Truck
-                    </Link>
-                </Button>
+                <div className="flex items-center gap-3">
+                    <Button variant="outline" className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
+                        <Wrench className="h-4 w-4" />
+                        Service Report
+                    </Button>
+                    <Button asChild className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
+                        <Link href={`/admin/trucks/${truck.id}/edit`}>
+                            <Edit className="h-4 w-4" />
+                            Edit Details
+                        </Link>
+                    </Button>
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Main Info */}
-                <div className="md:col-span-2 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left Column - Main Info */}
+                <div className="lg:col-span-2 space-y-6">
+                    {/* Vehicle Specifications */}
                     <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Truck className="h-5 w-5 text-primary" />
-                                Vehicle Information
+                        <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                                <Truck className="h-5 w-5 text-blue-600" />
+                                Vehicle Specifications
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
+                        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-4">
                             <div>
-                                <p className="text-sm font-medium text-muted-foreground">License Plate</p>
-                                <p className="font-medium">{truck.licensePlate}</p>
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Brand</p>
+                                <p className="font-semibold">{truck.brand}</p>
                             </div>
                             <div>
-                                <p className="text-sm font-medium text-muted-foreground">Province</p>
-                                <p className="font-medium">{truck.province}</p>
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Model</p>
+                                <p className="font-semibold">{truck.model}</p>
                             </div>
                             <div>
-                                <p className="text-sm font-medium text-muted-foreground">Brand</p>
-                                <p className="font-medium">{truck.brand}</p>
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Year</p>
+                                <p className="font-semibold">{truck.year}</p>
                             </div>
                             <div>
-                                <p className="text-sm font-medium text-muted-foreground">Model</p>
-                                <p className="font-medium">{truck.model}</p>
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Fuel Type</p>
+                                <p className="font-semibold">{truck.fuelType || "Diesel"}</p>
                             </div>
                             <div>
-                                <p className="text-sm font-medium text-muted-foreground">Type</p>
-                                <p className="font-medium">{truck.type}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Color</p>
-                                <p className="font-medium">{truck.color}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Year</p>
-                                <p className="font-medium">{truck.year}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Seats</p>
-                                <p className="font-medium">{truck.seats || "-"}</p>
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Max Load</p>
+                                <p className="font-semibold">{truck.maxLoadWeight ? `${truck.maxLoadWeight.toLocaleString()} kg` : "-"}</p>
                             </div>
                         </CardContent>
                     </Card>
 
+                    {/* Engine & Registration */}
                     <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Info className="h-5 w-5 text-primary" />
-                                Technical Details
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">VIN / Chassis No.</p>
-                                <p className="font-mono text-sm">{truck.vin}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Engine Number</p>
-                                <p className="font-mono text-sm">{truck.engineNumber}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Engine Capacity</p>
-                                <p className="font-medium">{truck.engineCapacity ? `${truck.engineCapacity} cc` : "-"}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Fuel Capacity</p>
-                                <p className="font-medium">{truck.fuelCapacity ? `${truck.fuelCapacity} L` : "-"}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Max Load Weight</p>
-                                <p className="font-medium">{truck.maxLoadWeight ? `${truck.maxLoadWeight} kg` : "-"}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Fuel Type</p>
-                                <p className="font-medium">{truck.fuelType}</p>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {truck.notes && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <FileText className="h-5 w-5 text-primary" />
-                                    Notes
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="whitespace-pre-wrap text-sm">{truck.notes}</p>
-                            </CardContent>
-                        </Card>
-                    )}
-
-                    {/* Truck Photos & Documents */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Camera className="h-5 w-5 text-primary" />
-                                Photos & Documents
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            {/* Specific Photos Grid */}
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {[
-                                    { src: truck.imageFrontRight, label: "Front-Right" },
-                                    { src: truck.imageFrontLeft, label: "Front-Left" },
-                                    { src: truck.imageBackRight, label: "Back-Right" },
-                                    { src: truck.imageBackLeft, label: "Back-Left" },
-                                ].map((photo, i) => (
-                                    <div key={i} className="space-y-2 cursor-pointer group" onClick={() => photo.src && handleFileClick(photo.src)}>
-                                        <div className="relative aspect-video rounded-md overflow-hidden border bg-muted/30 group-hover:ring-2 group-hover:ring-primary transition-all">
-                                            {photo.src ? (
-                                                <Image src={photo.src} alt={photo.label} fill className="object-cover" />
-                                            ) : (
-                                                <div className="flex items-center justify-center h-full text-muted-foreground text-xs">No Image</div>
-                                            )}
-                                            {photo.src && (
-                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                    <Camera className="h-6 w-6 text-white" />
-                                                </div>
-                                            )}
-                                        </div>
-                                        <p className="text-xs font-medium text-center text-muted-foreground">{photo.label}</p>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <Separator />
-
-                            {/* Documents List */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                {[
-                                    { url: truck.documentTax, label: "Tax Document" },
-                                    { url: truck.documentRegister, label: "Registration Document" },
-                                ].map((doc, i) => (
-                                    <div key={i} className="flex items-center justify-between p-3 border rounded-md bg-muted/30">
-                                        <div className="flex items-center gap-2">
-                                            <FileText className="h-4 w-4 text-primary" />
-                                            <span className="text-sm font-medium">{doc.label}</span>
-                                        </div>
-                                        {doc.url ? (
-                                            <Button variant="ghost" size="sm" onClick={() => handleFileClick(doc.url!)}>
-                                                View
-                                            </Button>
-                                        ) : (
-                                            <span className="text-xs text-muted-foreground">Missing</span>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Legacy Images Fallback */}
-                    {truck.images && truck.images.length > 0 && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-sm font-medium text-muted-foreground">
-                                    Additional / Legacy Photos
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    {truck.images.map((img, index) => (
-                                        <div key={index} className="relative aspect-video rounded-md overflow-hidden border cursor-pointer hover:ring-2 hover:ring-primary" onClick={() => handleFileClick(img)}>
-                                            <Image src={img} alt={`Legacy ${index}`} fill className="object-cover" />
-                                        </div>
-                                    ))}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
-
-                </div>
-
-                {/* Sidebar Info */}
-                <div className="space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <User className="h-5 w-5 text-primary" />
-                                Ownership & Assignment
+                        <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                                <Info className="h-5 w-5 text-blue-600" />
+                                Engine & Registration
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="space-y-4">
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Owner Type</p>
-                                    <p className="font-medium capitalize">{truck.ownershipType === "subcontractor" ? "Subcontractor" : "Own Fleet"}</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-12">
+                                <div className="flex justify-between py-2 border-b">
+                                    <span className="text-sm text-muted-foreground">Engine Number</span>
+                                    <span className="text-sm font-medium font-mono">{truck.engineNumber}</span>
                                 </div>
-                                {truck.ownershipType === "subcontractor" && truck.subcontractorId && (
-                                    <>
-                                        <Separator />
-                                        <div>
-                                            <p className="text-sm font-medium text-muted-foreground">Subcontractor</p>
-                                            <p className="font-medium">{subcontractors.find(s => s.id === truck.subcontractorId)?.name || truck.subcontractorId}</p>
-                                        </div>
-                                    </>
-                                )}
+                                <div className="flex justify-between py-2 border-b">
+                                    <span className="text-sm text-muted-foreground">Chassis Number</span>
+                                    <span className="text-sm font-medium font-mono">{truck.vin}</span>
+                                </div>
+                                <div className="flex justify-between py-2 border-b">
+                                    <span className="text-sm text-muted-foreground">Registration Date</span>
+                                    <span className="text-sm font-medium">{formatDate(truck.registrationDate)}</span>
+                                </div>
+                                <div className="flex justify-between py-2 border-b items-center">
+                                    <span className="text-sm text-muted-foreground">Insurance Expiry</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium text-red-600">{formatDate(truck.insuranceExpiryDate)}</span>
+                                        {truck.insuranceExpiryDate && (
+                                            <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-100 text-[10px] h-5 px-1.5 rounded-sm">
+                                                90 DAYS
+                                            </Badge>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
 
+                    {/* Ownership Info */}
                     <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Calendar className="h-5 w-5 text-primary" />
-                                Key Dates
+                        <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                                <Shield className="h-5 w-5 text-blue-600" />
+                                Ownership Info
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Registration Date</p>
-                                <p className="font-medium">{formatDate(truck.registrationDate)}</p>
-                            </div>
-                            <Separator />
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Purchase Date</p>
-                                <p className="font-medium">{formatDate(truck.buyingDate)}</p>
-                            </div>
-                            <Separator />
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Last Updated</p>
-                                <p className="text-sm text-muted-foreground">{formatDate(truck.updatedAt)}</p>
+                        <CardContent>
+                            <div className="bg-muted/30 rounded-lg p-4 border flex items-start gap-4">
+                                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                                    <Truck className="h-5 w-5 text-blue-600" />
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-semibold flex items-center gap-2">
+                                        {truck.ownershipType === "subcontractor" ? "Subcontractor Fleet" : "Own Fleet"}
+                                        {truck.ownershipType === "subcontractor" && (
+                                            <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-[10px] h-5 px-1.5 rounded-sm">PARTNER</Badge>
+                                        )}
+                                    </h4>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                        {truck.ownershipType === "subcontractor" && truck.subcontractorId
+                                            ? `Managed by ${subcontractors.find(s => s.id === truck.subcontractorId)?.name || truck.subcontractorId}`
+                                            : "Managed by Internal Logistics Team"}
+                                    </p>
+                                    <Button variant="link" className="p-0 h-auto text-blue-600 mt-2 text-xs font-medium flex items-center gap-1">
+                                        View Partner Profile <ArrowLeft className="h-3 w-3 rotate-180" />
+                                    </Button>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
+                </div>
 
-                    {(truck.insurancePolicyNumber || truck.insuranceCompany || truck.insuranceType || truck.insuranceStartDate || truck.insuranceExpiryDate) && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <FileText className="h-5 w-5 text-primary" />
-                                    Insurance Info
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                {truck.insurancePolicyId && (
-                                    <div>
-                                        <p className="text-sm font-medium text-muted-foreground">Policy ID</p>
-                                        <p className="font-medium">{truck.insurancePolicyId}</p>
+                {/* Right Column - Sidebar */}
+                <div className="space-y-6">
+                    {/* Current Assignment */}
+                    <Card>
+                        <CardHeader className="pb-3 border-b">
+                            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                                <MapPin className="h-5 w-5 text-blue-600" />
+                                Current Assignment
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-6">
+                            {/* Placeholder Logic for Assignment */}
+                            {false ? (
+                                <div className="flex flex-col items-center text-center">
+                                    <div className="relative mb-3">
+                                        <Avatar className="h-20 w-20 border-4 border-background shadow-sm">
+                                            <AvatarImage src="/placeholder-avatar.jpg" />
+                                            <AvatarFallback className="bg-muted text-muted-foreground">
+                                                <User className="h-8 w-8" />
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <span className="absolute bottom-1 right-1 h-4 w-4 rounded-full bg-green-500 border-2 border-background"></span>
                                     </div>
-                                )}
-                                {truck.insurancePolicyNumber && (
-                                    <>
-                                        <Separator />
-                                        <div>
-                                            <p className="text-sm font-medium text-muted-foreground">Policy Number</p>
-                                            <p className="font-medium">{truck.insurancePolicyNumber}</p>
+                                    <h3 className="text-lg font-bold">Johnathan Doe</h3>
+                                    <p className="text-xs text-muted-foreground font-medium mb-4">Class A CDL • 8 Years Exp.</p>
+
+                                    <div className="grid grid-cols-2 gap-4 w-full mb-6">
+                                        <div className="bg-muted/50 rounded p-2 text-center">
+                                            <p className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider mb-0.5">License</p>
+                                            <p className="text-xs font-semibold">#NY-882199</p>
                                         </div>
-                                    </>
-                                )}
-                                {truck.insuranceCompany && (
-                                    <>
-                                        <Separator />
-                                        <div>
-                                            <p className="text-sm font-medium text-muted-foreground">Provider</p>
-                                            <p className="font-medium">{truck.insuranceCompany}</p>
+                                        <div className="bg-muted/50 rounded p-2 text-center">
+                                            <p className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider mb-0.5">Status</p>
+                                            <p className="text-xs font-semibold">On Duty</p>
                                         </div>
-                                    </>
-                                )}
-                                {truck.insuranceType && (
-                                    <>
-                                        <Separator />
-                                        <div>
-                                            <p className="text-sm font-medium text-muted-foreground">Type</p>
-                                            <p className="font-medium">Type {truck.insuranceType}</p>
-                                        </div>
-                                    </>
-                                )}
-                                {truck.insurancePremium && (
-                                    <>
-                                        <Separator />
-                                        <div>
-                                            <p className="text-sm font-medium text-muted-foreground">Premium</p>
-                                            <p className="font-medium">{truck.insurancePremium?.toLocaleString()} THB</p>
-                                        </div>
-                                    </>
-                                )}
-                                {truck.insuranceStartDate && (
-                                    <>
-                                        <Separator />
-                                        <div>
-                                            <p className="text-sm font-medium text-muted-foreground">Start Date</p>
-                                            <p className="font-medium">{formatDate(truck.insuranceStartDate)}</p>
-                                        </div>
-                                    </>
-                                )}
-                                {truck.insuranceExpiryDate && (
-                                    <>
-                                        <Separator />
-                                        <div>
-                                            <p className="text-sm font-medium text-muted-foreground">Expiry Date</p>
-                                            <p className="font-medium">{formatDate(truck.insuranceExpiryDate)}</p>
-                                        </div>
-                                    </>
-                                )}
-                                {truck.insuranceNotes && (
-                                    <>
-                                        <Separator />
-                                        <div>
-                                            <p className="text-sm font-medium text-muted-foreground">Notes</p>
-                                            <p className="font-medium text-sm">{truck.insuranceNotes}</p>
-                                        </div>
-                                    </>
-                                )}
-                                {truck.insuranceDocuments && truck.insuranceDocuments.length > 0 && (
-                                    <>
-                                        <Separator />
-                                        <div>
-                                            <p className="text-sm font-medium text-muted-foreground mb-2">Documents</p>
-                                            <div className="flex flex-wrap gap-2">
-                                                {truck.insuranceDocuments.map((doc, idx) => (
-                                                    <Button key={idx} variant="outline" size="sm" onClick={() => handleFileClick(doc)} className="text-xs h-7">
-                                                        Doc {idx + 1}
-                                                    </Button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
-                            </CardContent>
-                        </Card>
-                    )}
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3 w-full">
+                                        <Button variant="outline" className="w-full text-xs h-9">
+                                            <Phone className="h-3.5 w-3.5 mr-2" />
+                                            Call
+                                        </Button>
+                                        <Button className="w-full text-xs h-9 bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-100 shadow-none">
+                                            Profile
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center text-center">
+                                    <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                                        <User className="h-6 w-6 text-muted-foreground" />
+                                    </div>
+                                    <p className="text-sm font-medium mb-1">No Driver Assigned</p>
+                                    <p className="text-xs text-muted-foreground mb-4">Assign a driver to this truck to track performance.</p>
+                                    <Button className="w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white">
+                                        <Plus className="h-4 w-4" />
+                                        Assign Driver
+                                    </Button>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Vehicle Photos */}
+                    <Card>
+                        <CardHeader className="pb-3 border-b flex flex-row items-center justify-between">
+                            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                                <Camera className="h-5 w-5 text-blue-600" />
+                                Vehicle Photos
+                            </CardTitle>
+                            <span className="text-xs font-medium text-muted-foreground">{viewableFiles.filter(f => f.type === 'image').length} PHOTOS</span>
+                        </CardHeader>
+                        <CardContent className="pt-4">
+                            <div className="grid grid-cols-2 gap-2">
+                                {viewableFiles.filter(f => f.type === 'image').map((file, i) => (
+                                    <div
+                                        key={i}
+                                        className="relative aspect-video rounded-md overflow-hidden bg-muted border cursor-pointer"
+                                        onClick={() => handleFileClick(file.url)}
+                                    >
+                                        <Image src={file.url} alt={file.label} fill className="object-cover hover:scale-105 transition-transform duration-300" />
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
 

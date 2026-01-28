@@ -1,5 +1,6 @@
 import { db } from "@/firebase/client";
 import { collection, doc, getDoc, getDocs, query, orderBy } from "firebase/firestore";
+import { COLLECTIONS } from "@/lib/collections";
 
 export interface TruckData {
     id: string;
@@ -47,6 +48,14 @@ export interface TruckData {
     insurancePremium?: number;
     insuranceDocuments?: string[];
     insuranceNotes?: string;
+
+    // Compliance Fields
+    taxExpiryDate?: string;
+    lastServiceDate?: string;
+    nextServiceDate?: string;
+    nextServiceMileage?: number;
+    currentMileage?: number;
+
     createdBy: string;
     createdAt: Date | null;
     updatedAt: Date | null;
@@ -70,7 +79,7 @@ const formatTimestamp = (timestamp: any): Date | null => {
 export async function getTrucksClient(): Promise<TruckData[]> {
     try {
         // Get trucks from Firestore using client SDK
-        const trucksRef = collection(db, "trucks");
+        const trucksRef = collection(db, COLLECTIONS.TRUCKS);
         const q = query(trucksRef, orderBy("createdAt", "desc"));
         const snapshot = await getDocs(q);
 
@@ -123,6 +132,13 @@ export async function getTrucksClient(): Promise<TruckData[]> {
                 insuranceDocuments: data.insuranceDocuments || [],
                 insuranceNotes: data.insuranceNotes || "",
 
+                // Compliance Fields
+                taxExpiryDate: data.taxExpiryDate || "",
+                lastServiceDate: data.lastServiceDate || "",
+                nextServiceDate: data.nextServiceDate || "",
+                nextServiceMileage: data.nextServiceMileage,
+                currentMileage: data.currentMileage,
+
                 createdBy: data.createdBy || "",
                 createdAt: formatTimestamp(data.createdAt),
                 updatedAt: formatTimestamp(data.updatedAt),
@@ -139,7 +155,7 @@ export async function getTrucksClient(): Promise<TruckData[]> {
 export async function getTruckByIdClient(id: string): Promise<TruckData | null> {
     try {
         // Get truck from Firestore using client SDK
-        const truckRef = doc(db, "trucks", id);
+        const truckRef = doc(db, COLLECTIONS.TRUCKS, id);
         const docSnap = await getDoc(truckRef);
 
         if (!docSnap.exists()) {
@@ -191,6 +207,13 @@ export async function getTruckByIdClient(id: string): Promise<TruckData | null> 
             insurancePremium: data.insurancePremium,
             insuranceDocuments: data.insuranceDocuments || [],
             insuranceNotes: data.insuranceNotes || "",
+
+            // Compliance Fields
+            taxExpiryDate: data.taxExpiryDate || "",
+            lastServiceDate: data.lastServiceDate || "",
+            nextServiceDate: data.nextServiceDate || "",
+            nextServiceMileage: data.nextServiceMileage,
+            currentMileage: data.currentMileage,
 
             createdBy: data.createdBy || "",
             createdAt: formatTimestamp(data.createdAt),

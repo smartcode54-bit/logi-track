@@ -68,7 +68,14 @@ export const truckSchema = z.object({
 
     // Documents (Required for owned trucks, optional for subcontractor trucks)
     documentTax: z.string().optional().default(""),
+    taxExpiryDate: z.string().optional(), // Tax (Act) Expiry Date
     documentRegister: z.string().optional().default(""),
+
+    // Maintenance Book
+    lastServiceDate: z.string().optional(),
+    nextServiceDate: z.string().optional(),
+    nextServiceMileage: optionalNumber(0, 2000000, "Next Service Mileage"),
+    currentMileage: optionalNumber(0, 2000000, "Current Mileage"),
 
     // Insurance Information (Optional)
     insurancePolicyId: z.string().optional(), // maps to policy_id
@@ -97,6 +104,12 @@ export const truckSchema = z.object({
         }
         if (!data.documentTax) {
             ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Tax document is required for own fleet", path: ["documentTax"] });
+        }
+        if (!data.taxExpiryDate) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Tax Expiry Date is required for own fleet", path: ["taxExpiryDate"] });
+        }
+        if (!data.registrationDate) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Registration Date is required for own fleet", path: ["registrationDate"] });
         }
         if (!data.documentRegister) {
             ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Registration document is required for own fleet", path: ["documentRegister"] });
@@ -158,5 +171,10 @@ export const truckDefaultValues: TruckFormValues = {
     imageBackLeft: "",
     // Documents
     documentTax: "",
+    taxExpiryDate: "",
     documentRegister: "",
+    lastServiceDate: "",
+    nextServiceDate: "",
+    nextServiceMileage: undefined,
+    currentMileage: 0,
 };

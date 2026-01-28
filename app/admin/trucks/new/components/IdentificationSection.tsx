@@ -16,7 +16,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useFormContext } from "react-hook-form";
 import { useLanguage } from "@/context/language";
-import { THAILAND_PROVINCES } from "@/lib/constants";
+import { PROVINCES } from "@/lib/provinces";
 import { Combobox } from "@/components/ui/combobox";
 import { Fingerprint } from "lucide-react";
 
@@ -64,7 +64,7 @@ export function IdentificationSection() {
                                 <FormLabel>{t("province")} *</FormLabel>
                                 <FormControl>
                                     <Combobox
-                                        options={THAILAND_PROVINCES}
+                                        options={PROVINCES}
                                         value={field.value}
                                         onSelect={(value) => setValue("province", value, { shouldValidate: true })}
                                         placeholder="Select province"
