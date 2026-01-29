@@ -407,7 +407,7 @@ export default function TrucksListPage() {
                                                             <TooltipProvider key="tax">
                                                                 <Tooltip>
                                                                     <TooltipTrigger asChild>
-                                                                        <Link href={`/admin/trucks/${truck.id}/renew?type=tax`} onClick={(e) => e.stopPropagation()} className="hover:opacity-80 transition-opacity w-fit">
+                                                                        <Link href={`/admin/trucks/renew?id=${truck.id}&type=tax`} onClick={(e) => e.stopPropagation()} className="hover:opacity-80 transition-opacity w-fit">
                                                                             {taxBadge}
                                                                         </Link>
                                                                     </TooltipTrigger>
@@ -437,7 +437,7 @@ export default function TrucksListPage() {
                                                             <TooltipProvider key="insu">
                                                                 <Tooltip>
                                                                     <TooltipTrigger asChild>
-                                                                        <Link href={`/admin/trucks/${truck.id}/renew?type=insurance`} onClick={(e) => e.stopPropagation()} className="hover:opacity-80 transition-opacity w-fit">
+                                                                        <Link href={`/admin/trucks/renew?id=${truck.id}&type=insurance`} onClick={(e) => e.stopPropagation()} className="hover:opacity-80 transition-opacity w-fit">
                                                                             {insuBadge}
                                                                         </Link>
                                                                     </TooltipTrigger>
@@ -487,7 +487,7 @@ export default function TrucksListPage() {
                                                     </Link>
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem asChild>
-                                                    <Link href={`/admin/trucks/${truck.id}/edit`} className="flex items-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                                                    <Link href={`/admin/trucks/edit?id=${truck.id}`} className="flex items-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
                                                         <Edit className="mr-2 h-4 w-4" />
                                                         Edit Truck
                                                     </Link>
@@ -496,7 +496,7 @@ export default function TrucksListPage() {
                                                 {/* Renew Actions - Only show if needed */}
                                                 {truck.taxExpiryDate && (new Date(truck.taxExpiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24) <= 60 && (
                                                     <DropdownMenuItem asChild>
-                                                        <Link href={`/admin/trucks/${truck.id}/renew?type=tax`} className="flex items-center cursor-pointer text-orange-600 focus:text-orange-700" onClick={(e) => e.stopPropagation()}>
+                                                        <Link href={`/admin/trucks/renew?id=${truck.id}&type=tax`} className="flex items-center cursor-pointer text-orange-600 focus:text-orange-700" onClick={(e) => e.stopPropagation()}>
                                                             <FileText className="mr-2 h-4 w-4" />
                                                             Renew - TAX
                                                         </Link>
@@ -505,7 +505,7 @@ export default function TrucksListPage() {
 
                                                 {truck.insuranceExpiryDate && (new Date(truck.insuranceExpiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24) <= 60 && (
                                                     <DropdownMenuItem asChild>
-                                                        <Link href={`/admin/trucks/${truck.id}/renew?type=insurance`} className="flex items-center cursor-pointer text-blue-600 focus:text-blue-700" onClick={(e) => e.stopPropagation()}>
+                                                        <Link href={`/admin/trucks/renew?id=${truck.id}&type=insurance`} className="flex items-center cursor-pointer text-blue-600 focus:text-blue-700" onClick={(e) => e.stopPropagation()}>
                                                             <ShieldAlert className="mr-2 h-4 w-4" />
                                                             Renew - Insurance
                                                         </Link>
@@ -513,7 +513,7 @@ export default function TrucksListPage() {
                                                 )}
 
                                                 <DropdownMenuItem asChild>
-                                                    <Link href={`/admin/trucks/${truck.id}/maintenance`} className="flex items-center cursor-pointer text-yellow-600 focus:text-yellow-700" onClick={(e) => e.stopPropagation()}>
+                                                    <Link href={`/admin/trucks/maintenance?id=${truck.id}`} className="flex items-center cursor-pointer text-yellow-600 focus:text-yellow-700" onClick={(e) => e.stopPropagation()}>
                                                         <Wrench className="mr-2 h-4 w-4" />
                                                         Record Maintenance
                                                     </Link>

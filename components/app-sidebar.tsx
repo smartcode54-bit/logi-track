@@ -66,6 +66,10 @@ export function AppSidebar() {
                     url: "/admin/truck-assignment",
                 },
                 {
+                    title: "Truck Renewals",
+                    url: "/admin/renewals",
+                },
+                {
                     title: "Manage Subcontractors",
                     url: "/admin/subcontractors",
                 },

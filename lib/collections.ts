@@ -24,6 +24,9 @@ export const COLLECTIONS = {
 
     /** Waitlist signups */
     WAITLIST: "waitlist",
+
+    /** Financial transactions (Tax, Insurance, Maintenance) */
+    TRANSACTIONS: "transactions",
 } as const;
 
 /** Type for collection names */

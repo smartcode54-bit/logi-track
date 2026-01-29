@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useLanguage } from "@/context/language";
-import { getTruckByIdClient, TruckData } from "../../actions.client";
-import { updateTruckInFirestoreClient, uploadTruckFile } from "../../new/action.client";
+import { getTruckByIdClient, TruckData } from "../actions.client";
+import { updateTruckInFirestoreClient, uploadTruckFile } from "../new/action.client";
 import { useAuth } from "@/context/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -30,11 +30,11 @@ const SERVICE_TYPES = [
 
 export default function MaintenanceClient() {
     const { t } = useLanguage();
-    const params = useParams();
+    const searchParams = useSearchParams();
     const router = useRouter();
     const auth = useAuth();
     const currentUser = auth?.currentUser;
-    const id = params?.id as string;
+    const id = searchParams.get("id") as string;
 
     const [truck, setTruck] = useState<TruckData | null>(null);
     const [loading, setLoading] = useState(true);

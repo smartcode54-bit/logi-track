@@ -97,7 +97,16 @@ export const truckSchema = z.object({
     insuranceRenewalStatus: z.enum(["pending", "in_progress", "completed"]).optional(),
     taxExpense: optionalNumber(0, 1000000, "Tax Expense"),
     taxReceipt: z.string().optional(), // URL to uploaded receipt
+    paymentMethod: z.enum(["Cash", "Transfer", "Company Credit"]).or(z.literal("")).optional(),
     insuranceReceipt: z.string().optional(), // URL to uploaded receipt
+
+    // Audit Trail
+    statusHistory: z.array(z.object({
+        status: z.string(),
+        date: z.string(),
+        changedBy: z.string(),
+        notes: z.string().optional()
+    })).optional(),
 }).superRefine((data, ctx) => {
     // Conditional validation: images and documents required for own fleet only
     if (data.ownershipType === "own") {
@@ -194,5 +203,7 @@ export const truckDefaultValues: TruckFormValues = {
     insuranceRenewalStatus: undefined,
     taxExpense: undefined,
     taxReceipt: "",
+    paymentMethod: "",
     insuranceReceipt: "",
+    statusHistory: [],
 };

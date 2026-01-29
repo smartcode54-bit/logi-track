@@ -40,3 +40,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# vibe rules
+.vibe-rules.md
+
+# husky
+.husky

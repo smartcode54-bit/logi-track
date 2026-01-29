@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useLanguage } from "@/context/language";
-import { getTruckByIdClient, TruckData } from "../../actions.client";
-import { updateTruckInFirestoreClient, uploadTruckFile } from "../../new/action.client";
+import { getTruckByIdClient, TruckData, logTransaction } from "../actions.client";
+import { updateTruckInFirestoreClient, uploadTruckFile } from "../new/action.client";
 import { useAuth } from "@/context/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -20,10 +20,9 @@ import { type ReactNode } from "react";
 
 export default function RenewalClient() {
     const { t } = useLanguage();
-    const params = useParams();
     const searchParams = useSearchParams();
     const router = useRouter();
-    const id = params?.id as string;
+    const id = searchParams.get("id") as string;
     const initialTab = searchParams.get("type") === "insurance" ? "insurance" : "tax";
 
     const [truck, setTruck] = useState<TruckData | null>(null);
@@ -132,6 +131,7 @@ function RenewalForm({ type, truck, onSuccess }: { type: "tax" | "insurance", tr
     const [assignedTo, setAssignedTo] = useState(initialResponsible);
     const [provider, setProvider] = useState(type === 'insurance' ? truck.insuranceCompany || "" : "");
     const [expense, setExpense] = useState<string>(initialExpense ? String(initialExpense) : "");
+    const [paymentMethod, setPaymentMethod] = useState(truck.paymentMethod || "");
     const [startDate, setStartDate] = useState(type === 'insurance' ? truck.insuranceStartDate || "" : "");
     const [expiryDate, setExpiryDate] = useState(initialExpiry);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -161,7 +161,9 @@ function RenewalForm({ type, truck, onSuccess }: { type: "tax" | "insurance", tr
         const file = e.target.files[0];
         setUploadingDoc(true);
         try {
-            const path = `trucks/documents/insurance/${Date.now()}_${file.name}`;
+            const year = new Date().getFullYear();
+            const ext = file.name.split('.').pop();
+            const path = `trucks/${truck.id}/insurance_doc_${year}_${Date.now()}.${ext}`;
             const url = await uploadTruckFile(file, path);
             setUploadedDocs(prev => [...prev, url]);
         } catch (error) {
@@ -188,7 +190,9 @@ function RenewalForm({ type, truck, onSuccess }: { type: "tax" | "insurance", tr
             // Upload file if selected
             let newFileUrl = existingFileUrl;
             if (selectedFile) {
-                const path = `trucks/documents/${type}/${Date.now()}_${selectedFile.name}`;
+                const year = new Date().getFullYear();
+                const ext = selectedFile.name.split('.').pop();
+                const path = `trucks/${truck.id}/${type}_receipt_${year}_${Date.now()}.${ext}`;
                 newFileUrl = await uploadTruckFile(selectedFile, path);
             }
 
@@ -198,6 +202,7 @@ function RenewalForm({ type, truck, onSuccess }: { type: "tax" | "insurance", tr
                 updatePayload.taxRenewalStatus = nextStatus;
                 updatePayload.taxResponsible = assignedTo;
                 if (expense) updatePayload.taxExpense = parseFloat(expense);
+                if (paymentMethod) updatePayload.paymentMethod = paymentMethod;
                 if (newFileUrl) updatePayload.taxReceipt = newFileUrl;
 
                 if (nextStatus === 'completed') {
@@ -205,6 +210,16 @@ function RenewalForm({ type, truck, onSuccess }: { type: "tax" | "insurance", tr
                     if (newFileUrl) {
                         updatePayload.documentTax = newFileUrl;
                     }
+
+                    // Add to statusHistory
+                    const newHistoryItem = {
+                        status: "Tax Renewed",
+                        date: new Date().toISOString(),
+                        changedBy: currentUser.displayName || currentUser.email || "Unknown",
+                        notes: `Expiry: ${expiryDate}`
+                    };
+                    const currentHistory = truck.statusHistory || [];
+                    updatePayload.statusHistory = [...currentHistory, newHistoryItem];
                 } else {
                     if (expiryDate) updatePayload.taxExpiryDate = expiryDate;
                 }
@@ -215,6 +230,7 @@ function RenewalForm({ type, truck, onSuccess }: { type: "tax" | "insurance", tr
                 updatePayload.maintenanceResponsible = assignedTo;
                 if (provider) updatePayload.insuranceCompany = provider;
                 if (expense) updatePayload.insurancePremium = parseFloat(expense);
+                if (paymentMethod) updatePayload.paymentMethod = paymentMethod;
                 if (newFileUrl) updatePayload.insuranceReceipt = newFileUrl;
                 if (policyId) updatePayload.insurancePolicyId = policyId;
                 if (policyNumber) updatePayload.insurancePolicyNumber = policyNumber;
@@ -236,6 +252,16 @@ function RenewalForm({ type, truck, onSuccess }: { type: "tax" | "insurance", tr
                     if (uploadedDocs.length > 0) {
                         updatePayload.insuranceDocuments = uploadedDocs;
                     }
+
+                    // Add to statusHistory
+                    const newHistoryItem = {
+                        status: "Insurance Renewed",
+                        date: new Date().toISOString(),
+                        changedBy: currentUser.displayName || currentUser.email || "Unknown",
+                        notes: `Policy: ${policyNumber} | Expiry: ${expiryDate}`
+                    };
+                    const currentHistory = truck.statusHistory || [];
+                    updatePayload.statusHistory = [...currentHistory, newHistoryItem];
                 } else {
                     if (expiryDate) updatePayload.insuranceExpiryDate = expiryDate;
                     if (startDate) updatePayload.insuranceStartDate = startDate;
@@ -248,13 +274,30 @@ function RenewalForm({ type, truck, onSuccess }: { type: "tax" | "insurance", tr
 
             await updateTruckInFirestoreClient(truck.id, updatePayload as TruckValidatedData, currentUser.uid);
 
+            // Log Transaction if completed
+            if (nextStatus === 'completed') {
+                const transactionData = {
+                    truckId: truck.id,
+                    type: type as "tax" | "insurance",
+                    subType: type === 'tax' ? "Tax Renewal" : `Insurance Renewal (${coverageType || "Unknown"})`,
+                    amount: parseFloat(expense || "0"),
+                    paymentMethod: paymentMethod || "Unknown",
+                    date: new Date().toISOString().split('T')[0], // Today's date
+                    receiptUrl: newFileUrl || undefined,
+                    performedBy: currentUser.displayName || currentUser.email || "Unknown",
+                    notes: type === 'tax' ? `Expiry: ${expiryDate}` : `Policy: ${policyNumber} | Expiry: ${expiryDate}`
+                };
+
+                await logTransaction(transactionData);
+            }
+
             setStatus(nextStatus);
             if (newFileUrl) setExistingFileUrl(newFileUrl);
             setSelectedFile(null);
             onSuccess();
 
             if (nextStatus === 'completed') {
-                router.push('/admin/trucks');
+                router.push(`/admin/trucks/view?id=${truck.id}`); // Redirect to view to see history
             }
 
         } catch (error) {
@@ -309,6 +352,20 @@ function RenewalForm({ type, truck, onSuccess }: { type: "tax" | "insurance", tr
                                     onChange={(e) => setExpense(e.target.value)}
                                     placeholder="0.00"
                                 />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>Payment Method</Label>
+                                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select method" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Cash">Cash</SelectItem>
+                                        <SelectItem value="Transfer">Transfer</SelectItem>
+                                        <SelectItem value="Company Credit">Company Credit</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             <div className="space-y-2">
@@ -390,6 +447,23 @@ function RenewalForm({ type, truck, onSuccess }: { type: "tax" | "insurance", tr
                                         onChange={(e) => setExpense(e.target.value)}
                                         placeholder="33000"
                                     />
+                                </div>
+                            </div>
+
+                            {/* Row 2.5: Payment Method */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <Label>Payment Method</Label>
+                                    <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select method" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Cash">Cash</SelectItem>
+                                            <SelectItem value="Transfer">Transfer</SelectItem>
+                                            <SelectItem value="Company Credit">Company Credit</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             </div>
 
@@ -562,6 +636,6 @@ function RenewalForm({ type, truck, onSuccess }: { type: "tax" | "insurance", tr
                     </div>
                 </form>
             </CardContent>
-        </Card>
+        </Card >
     );
 }

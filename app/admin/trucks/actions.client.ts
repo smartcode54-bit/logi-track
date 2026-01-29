@@ -1,5 +1,5 @@
 import { db } from "@/firebase/client";
-import { collection, doc, getDoc, getDocs, query, orderBy } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, orderBy, addDoc, serverTimestamp } from "firebase/firestore";
 import { COLLECTIONS } from "@/lib/collections";
 
 export interface TruckData {
@@ -65,7 +65,15 @@ export interface TruckData {
     insuranceRenewalStatus?: "pending" | "in_progress" | "completed";
     taxExpense?: number;
     taxReceipt?: string;
+    paymentMethod?: string;
     insuranceReceipt?: string;
+
+    statusHistory?: {
+        status: string;
+        date: string;
+        changedBy: string;
+        notes?: string;
+    }[];
 
     createdBy: string;
     createdAt: Date | null;
@@ -86,6 +94,18 @@ const formatTimestamp = (timestamp: any): Date | null => {
     }
     return timestamp;
 };
+
+export async function logTransaction(data: any) {
+    try {
+        await addDoc(collection(db, COLLECTIONS.TRANSACTIONS), {
+            ...data,
+            createdAt: serverTimestamp(),
+        });
+    } catch (error) {
+        console.error("Error logging transaction:", error);
+        throw error;
+    }
+}
 
 export async function getTrucksClient(): Promise<TruckData[]> {
     try {
@@ -155,7 +175,9 @@ export async function getTrucksClient(): Promise<TruckData[]> {
                 insuranceRenewalStatus: data.insuranceRenewalStatus,
                 taxExpense: data.taxExpense,
                 taxReceipt: data.taxReceipt,
+                paymentMethod: data.paymentMethod || "",
                 insuranceReceipt: data.insuranceReceipt,
+                statusHistory: data.statusHistory || [],
 
                 createdBy: data.createdBy || "",
                 createdAt: formatTimestamp(data.createdAt),
@@ -242,7 +264,9 @@ export async function getTruckByIdClient(id: string): Promise<TruckData | null> 
             insuranceRenewalStatus: data.insuranceRenewalStatus,
             taxExpense: data.taxExpense,
             taxReceipt: data.taxReceipt,
+            paymentMethod: data.paymentMethod || "",
             insuranceReceipt: data.insuranceReceipt,
+            statusHistory: data.statusHistory || [],
 
             createdBy: data.createdBy || "",
             createdAt: formatTimestamp(data.createdAt),

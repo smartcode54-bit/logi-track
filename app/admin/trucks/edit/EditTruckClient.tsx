@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Truck, Home, LayoutDashboard, Save, ArrowLeft, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -28,16 +29,16 @@ import { useLanguage } from "@/context/language";
 import { useAuth } from "@/context/auth";
 import { truckSchema, TruckFormValues, TruckValidatedData } from "@/validate/truckSchema";
 
-import { IdentificationSection } from "../../new/components/IdentificationSection";
-import { VehicleDetailsSection } from "../../new/components/VehicleDetailsSection";
-import { RegistrationSection } from "../../new/components/RegistrationSection";
-import { EngineInformationSection } from "../../new/components/EngineCapacitySection";
-import { MaintenanceSection } from "../../new/components/MaintenanceSection";
-import { PhotosSection } from "../../new/components/PhotosSection";
-import { InsuranceSection } from "../../new/components/InsuranceSection";
-import { updateTruckInFirestoreClient, uploadTruckFile } from "../../new/action.client";
-import { getTruckByIdClient } from "../../actions.client";
-import { getSubcontractors } from "../../../subcontractors/actions.client";
+import { IdentificationSection } from "../new/components/IdentificationSection";
+import { VehicleDetailsSection } from "../new/components/VehicleDetailsSection";
+import { RegistrationSection } from "../new/components/RegistrationSection";
+import { EngineInformationSection } from "../new/components/EngineCapacitySection";
+import { MaintenanceSection } from "../new/components/MaintenanceSection";
+import { PhotosSection } from "../new/components/PhotosSection";
+import { InsuranceSection } from "../new/components/InsuranceSection";
+import { updateTruckInFirestoreClient, uploadTruckFile } from "../new/action.client";
+import { getTruckByIdClient } from "../actions.client";
+import { getSubcontractors } from "../../subcontractors/actions.client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Subcontractor Selector Component
@@ -66,8 +67,8 @@ function SubcontractorSelector({ value, onChange }: { value?: string, onChange: 
 
 export default function EditTruckClient() {
     const router = useRouter();
-    const params = useParams();
-    const truckId = params.id as string;
+    const searchParams = useSearchParams();
+    const truckId = searchParams.get("id") as string;
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -139,6 +140,8 @@ export default function EditTruckClient() {
                         // Ensure dates are valid strings or undefined
                         // If they are Firestore Timestamps, they handle conversion in actions.client.ts
                         // We rely on getTruckByIdClient returning strings for dates.
+                        year: String(truckData.year || ""),
+                        seats: String(truckData.seats || ""),
                         registrationDate: truckData.registrationDate || undefined,
                         buyingDate: truckData.buyingDate || undefined,
                         taxExpiryDate: truckData.taxExpiryDate || undefined,
@@ -146,6 +149,10 @@ export default function EditTruckClient() {
                         nextServiceDate: truckData.nextServiceDate || undefined,
                         insuranceStartDate: truckData.insuranceStartDate || undefined,
                         insuranceExpiryDate: truckData.insuranceExpiryDate || undefined,
+
+                        // Handle renewal status: if empty string, set to undefined to pass Zod validation
+                        taxRenewalStatus: (truckData.taxRenewalStatus as any) === "" ? undefined : truckData.taxRenewalStatus,
+                        insuranceRenewalStatus: (truckData.insuranceRenewalStatus as any) === "" ? undefined : truckData.insuranceRenewalStatus,
                     };
 
                     form.reset(formValues);
@@ -175,6 +182,7 @@ export default function EditTruckClient() {
 
     // Form submission handler
     const onSubmit = async (data: TruckFormValues) => {
+        console.log("Submitting form with data:", data);
         setIsSubmitting(true);
         setError(null);
 
@@ -226,9 +234,26 @@ export default function EditTruckClient() {
                 finalData.insuranceDocuments = newDocs;
             }
 
-            await updateTruckInFirestoreClient(truckId, finalData as TruckValidatedData, currentUser.uid);
+            // Exclude renewal status fields from the update to prevent overwriting concurrent changes
+            // e.g. if someone is renewing while this form is open
+            const {
+                taxRenewalStatus,
+                insuranceRenewalStatus,
+                taxExpense,
+                taxReceipt,
+                insuranceReceipt,
+                ...dataToUpdate
+            } = finalData;
 
-            router.push(`/admin/trucks/${truckId}`);
+            await updateTruckInFirestoreClient(truckId, dataToUpdate as TruckValidatedData, currentUser.uid);
+
+            toast.success("Truck updated successfully");
+
+            // wait for a bit to show the toast
+            setTimeout(() => {
+                router.push(`/admin/trucks/view?id=${truckId}`);
+            }, 1000);
+
         } catch (error) {
             console.error("Error updating truck:", error);
             const errorMessage = error instanceof Error
@@ -264,7 +289,7 @@ export default function EditTruckClient() {
                         </p>
                     </div>
                     <Button variant="outline" asChild>
-                        <Link href={`/admin/trucks/${truckId}`} className="flex items-center gap-2">
+                        <Link href={`/admin/trucks/view?id=${truckId}`} className="flex items-center gap-2">
                             <ArrowLeft className="h-4 w-4" />
                             Back to Details
                         </Link>
@@ -273,7 +298,7 @@ export default function EditTruckClient() {
 
                 {/* Form */}
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         {error && (
                             <div className="bg-destructive/15 text-destructive px-4 py-3 rounded-md border border-destructive/50">
                                 <p className="text-sm font-medium">{error}</p>
@@ -346,7 +371,7 @@ export default function EditTruckClient() {
 
                         <div className="flex justify-end gap-4">
                             <Button type="button" variant="outline" asChild>
-                                <Link href={`/admin/trucks/${truckId}`}>Cancel</Link>
+                                <Link href={`/admin/trucks/view?id=${truckId}`}>Cancel</Link>
                             </Button>
                             <Button
                                 type="submit"

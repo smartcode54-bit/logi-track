@@ -132,6 +132,10 @@ export default function TruckAssignmentPage() {
 
             if (!driver || !truck) throw new Error("Invalid selection");
 
+            // TODO: QA Insight - Block Dispatch if Insurance is OVERDUE
+            // Check truck.insuranceStatus or similar before proceeding
+            // if (truck.insuranceStatus === 'overdue') throw new Error("Truck has overdue insurance");
+
             await createAssignment({
                 truckId: truck.id,
                 driverId: driver.id,

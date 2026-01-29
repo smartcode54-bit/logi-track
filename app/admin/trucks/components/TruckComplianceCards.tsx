@@ -60,7 +60,7 @@ export function TruckComplianceCards({ onFilterChange }: TruckComplianceCardsPro
             setLoading(true);
             try {
                 const trucksRef = collection(db, "trucks");
-                const q = query(trucksRef, where("ownershipType", "==", "own"), where("truckStatus", "==", "active"));
+                const q = query(trucksRef, where("truckStatus", "==", "active"));
                 const snapshot = await getDocs(q);
 
                 const now = new Date();
