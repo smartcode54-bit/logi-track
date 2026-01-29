@@ -180,7 +180,9 @@ function ComplianceCard({ title, icon, stats, type, activeFilter, onCardClick }:
                             isActive("incoming") ? "bg-muted ring-1 ring-primary" : ""
                         )}
                     >
-                        <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Incoming</span>
+                        <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                            {type === 'service' ? "PM Incoming" : "Incoming"}
+                        </span>
                         <span className="text-2xl font-bold text-blue-600">{stats.incoming}</span>
                     </div>
                     <div
@@ -190,7 +192,9 @@ function ComplianceCard({ title, icon, stats, type, activeFilter, onCardClick }:
                             isActive("expiring") ? "bg-muted ring-1 ring-primary" : ""
                         )}
                     >
-                        <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold"> Less 30 Days</span>
+                        <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                            {type === 'service' ? "PM Due Soon" : "Less 30 Days"}
+                        </span>
                         <span className="text-2xl font-bold text-orange-600">{stats.expiringSoon}</span>
                     </div>
                     <div
@@ -200,7 +204,9 @@ function ComplianceCard({ title, icon, stats, type, activeFilter, onCardClick }:
                             isActive("overdue") ? "bg-muted ring-1 ring-primary" : ""
                         )}
                     >
-                        <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Overdue</span>
+                        <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                            {type === 'service' ? "PM Overdue" : "Overdue"}
+                        </span>
                         <span className="text-2xl font-bold text-red-600">{stats.overdue}</span>
                     </div>
                 </div>

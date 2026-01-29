@@ -4,28 +4,26 @@ import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useLanguage } from "@/context/language";
 import { getTruckByIdClient, TruckData } from "../actions.client";
-import { updateTruckInFirestoreClient, uploadTruckFile } from "../new/action.client";
+import { uploadTruckFile } from "../new/action.client";
+import { saveMaintenanceRecord, getMaintenanceHistory } from "./actions.client";
+import { MaintenanceData, maintenanceSchema } from "@/validate/maintenanceSchema";
 import { useAuth } from "@/context/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Upload, FileText, Wrench, Save, Loader2, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Upload, FileText, Wrench, Save, Loader2, CheckCircle2, History, Plus, AlertTriangle, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatLicensePlate } from "@/lib/utils";
-import { TruckValidatedData } from "@/validate/truckSchema";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const SERVICE_TYPES = [
+const SERVICE_TYPES_PM = [
     { value: "oil_change", label: "Oil Change" },
     { value: "tire_rotation", label: "Tire Rotation" },
     { value: "brake_service", label: "Brake Service" },
     { value: "full_service", label: "Full Service" },
-    { value: "engine_repair", label: "Engine Repair" },
-    { value: "transmission", label: "Transmission Service" },
-    { value: "battery", label: "Battery Replacement" },
-    { value: "insurance_claim", label: "Insurance Claim" },
-    { value: "other", label: "Other" },
+    { value: "check_distance", label: "Distance Check" },
 ];
 
 export default function MaintenanceClient() {
@@ -37,45 +35,52 @@ export default function MaintenanceClient() {
     const id = searchParams.get("id") as string;
 
     const [truck, setTruck] = useState<TruckData | null>(null);
+    const [history, setHistory] = useState<MaintenanceData[]>([]);
     const [loading, setLoading] = useState(true);
+    const [view, setView] = useState<"list" | "form">("list");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Form State
-    const [currentMileage, setCurrentMileage] = useState<string>("");
+    const [type, setType] = useState<"PM" | "CM">("PM");
+    const [status, setStatus] = useState<"in_progress" | "completed">("in_progress");
     const [serviceType, setServiceType] = useState<string>("");
-    const [serviceDate, setServiceDate] = useState<string>("");
-    const [nextServiceDate, setNextServiceDate] = useState<string>("");
+    const [customServiceType, setCustomServiceType] = useState<string>(""); // For CM
+    const [startDate, setStartDate] = useState<string>("");
+    const [endDate, setEndDate] = useState<string>("");
+
+    // Costs
+    const [costLabor, setCostLabor] = useState<string>("");
+    const [costParts, setCostParts] = useState<string>("");
+
+    // Truck Stats
+    const [currentMileage, setCurrentMileage] = useState<string>("");
     const [nextServiceMileage, setNextServiceMileage] = useState<string>("");
-    const [serviceCost, setServiceCost] = useState<string>("");
-    const [serviceProvider, setServiceProvider] = useState<string>("");
+
+    const [provider, setProvider] = useState<string>("");
     const [notes, setNotes] = useState<string>("");
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [existingFileUrl, setExistingFileUrl] = useState<string | undefined>();
 
     useEffect(() => {
-        async function fetchTruck() {
+        async function loadData() {
             setLoading(true);
             try {
-                const data = await getTruckByIdClient(id);
-                setTruck(data);
-                // Initialize form with existing values
-                if (data) {
-                    const currentKm = data.currentMileage || 0;
-                    setCurrentMileage(currentKm.toString());
-                    setNextServiceDate(data.nextServiceDate || "");
-                    // Auto-calculate next service mileage: current + 20000 km
-                    const calculatedNextMileage = currentKm + 20000;
-                    setNextServiceMileage(data.nextServiceMileage?.toString() || calculatedNextMileage.toString());
-                    // Set today's date as default service date
-                    setServiceDate(new Date().toISOString().split('T')[0]);
+                const truckData = await getTruckByIdClient(id);
+                setTruck(truckData);
+                if (truckData) {
+                    const historyData = await getMaintenanceHistory(id);
+                    setHistory(historyData);
+
+                    // Init form defaults
+                    setCurrentMileage(truckData.currentMileage?.toString() || "");
+                    setStartDate(new Date().toISOString().split('T')[0]);
                 }
             } catch (error) {
-                console.error("Failed to fetch truck", error);
+                console.error("Failed to load data", error);
             } finally {
                 setLoading(false);
             }
         }
-        if (id) fetchTruck();
+        if (id) loadData();
     }, [id]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -89,251 +94,318 @@ export default function MaintenanceClient() {
         if (!currentUser || !truck) return;
 
         setIsSubmitting(true);
-
         try {
-            // Upload file if selected
-            let newFileUrl = existingFileUrl;
+            // Upload receipt
+            let imageUrl = "";
             if (selectedFile) {
-                const path = `trucks/documents/maintenance/${Date.now()}_${selectedFile.name}`;
-                newFileUrl = await uploadTruckFile(selectedFile, path);
+                const path = `trucks/documents/maintenance/${truck.id}/${Date.now()}_${selectedFile.name}`;
+                imageUrl = await uploadTruckFile(selectedFile, path);
             }
 
-            const updatePayload: Partial<TruckValidatedData> = {
-                lastServiceDate: serviceDate,
+            const labor = parseFloat(costLabor) || 0;
+            const parts = parseFloat(costParts) || 0;
+            const finalServiceType = type === "PM" ? serviceType : customServiceType;
+
+            const payload: any = {
+                truckId: truck.id,
+                type,
+                serviceType: finalServiceType,
+                startDate,
+                endDate: status === 'completed' ? endDate : undefined,
+                status,
+                costLabor: labor > 0 ? labor : undefined,
+                costParts: parts > 0 ? parts : undefined,
+                totalCost: (labor + parts) > 0 ? (labor + parts) : undefined,
+                provider,
+                currentMileage: parseFloat(currentMileage) || undefined,
+                nextServiceMileage: parseFloat(nextServiceMileage) || undefined,
+                images: imageUrl ? [imageUrl] : [],
+                notes
             };
 
-            // Update mileage if provided
-            if (currentMileage) {
-                updatePayload.currentMileage = parseFloat(currentMileage);
+            // Calculate next service mileage if PM and completed
+            if (type === 'PM' && status === 'completed' && payload.currentMileage && !payload.nextServiceMileage) {
+                payload.nextServiceMileage = payload.currentMileage + 10000; // Default +10k if not set
             }
 
-            // Update next service info
-            if (nextServiceDate) {
-                updatePayload.nextServiceDate = nextServiceDate;
-            }
-            if (nextServiceMileage) {
-                updatePayload.nextServiceMileage = parseFloat(nextServiceMileage);
-            }
+            // Validate with Zod before sending (Client-side check)
+            // const validated = maintenanceSchema.parse(payload); // Optional: add rigorous client validation
 
-            await updateTruckInFirestoreClient(truck.id, updatePayload as TruckValidatedData, currentUser.uid);
+            await saveMaintenanceRecord(payload, currentUser.uid);
 
-            // Redirect back to truck list
-            router.push('/admin/trucks');
+            // Refresh
+            const updatedHistory = await getMaintenanceHistory(truck.id);
+            setHistory(updatedHistory);
+
+            // Also refresh truck data to start reflects immediately
+            const updatedTruck = await getTruckByIdClient(id);
+            setTruck(updatedTruck);
+
+            setView("list");
+            // Reset form
+            resetForm();
 
         } catch (error) {
-            console.error("Error updating maintenance:", error);
+            console.error("Error saving record:", error);
+            alert("Failed to save record. Please check inputs.");
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    if (loading) {
-        return (
-            <div className="flex h-screen items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-        );
+    const resetForm = () => {
+        setType("PM");
+        setStatus("in_progress");
+        setServiceType("");
+        setCustomServiceType("");
+        setCostLabor("");
+        setCostParts("");
+        setSelectedFile(null);
+        setNotes("");
     }
 
-    if (!truck) {
-        return (
-            <div className="flex h-screen flex-col items-center justify-center gap-4">
-                <p className="text-xl font-semibold">{t("Truck not found")}</p>
-                <Button variant="outline" onClick={() => router.back()}>
-                    {t("Go Back")}
-                </Button>
-            </div>
-        );
-    }
+    if (loading) return <div className="flex h-screen justify-center items-center"><Loader2 className="animate-spin" /></div>;
+    if (!truck) return <div>Truck not found</div>;
 
     return (
-        <div className="container mx-auto max-w-4xl p-6 space-y-6">
+        <div className="container mx-auto max-w-5xl p-6 space-y-6">
             {/* Header */}
             <div className="flex items-center gap-4">
                 <Button variant="ghost" size="icon" onClick={() => router.back()}>
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">{t("Record Maintenance")}</h1>
+                    <h1 className="text-2xl font-bold tracking-tight">{t("Maintenance Management")}</h1>
                     <p className="text-muted-foreground">
                         {truck.brand} {truck.model} - <span className="font-mono font-medium text-foreground">{formatLicensePlate(truck.licensePlate)}</span>
                     </p>
                 </div>
+                <div className="ml-auto">
+                    <Badge variant={truck.truckStatus === 'maintenance' ? "destructive" : "secondary"} className="text-base px-3 py-1">
+                        {truck.truckStatus === 'maintenance' ? (
+                            <span className="flex items-center gap-2"><Wrench className="w-4 h-4" /> {t("Under Maintenance")}</span>
+                        ) : (
+                            <span className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> {t(truck.truckStatus)}</span>
+                        )}
+                    </Badge>
+                </div>
             </div>
 
-            {/* Form Card */}
-            <Card className="border-t-4 border-t-yellow-500/50 shadow-md">
-                <CardHeader className="pb-4">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <CardTitle className="text-xl flex items-center gap-2">
-                                <Wrench className="h-5 w-5 text-yellow-500" />
-                                {t("Service Record")}
-                            </CardTitle>
-                            <CardDescription className="mt-1">
-                                {t("Last Service")}: <span className="font-semibold text-foreground">
-                                    {truck.lastServiceDate || "-"}
-                                </span>
-                                {" | "}
-                                {t("Current Mileage")}: <span className="font-semibold text-foreground">
-                                    {truck.currentMileage?.toLocaleString() || "0"} km
-                                </span>
-                            </CardDescription>
-                        </div>
-                        <Badge variant="secondary" className="capitalize">
-                            {truck.truckStatus || "Active"}
-                        </Badge>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <form onSubmit={handleSave} className="space-y-6">
-                        {/* Row 1: Mileage & Service Type */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                                <Label>{t("Current Mileage (km)")}</Label>
-                                <Input
-                                    type="number"
-                                    value={currentMileage}
-                                    onChange={(e) => {
-                                        const newMileage = e.target.value;
-                                        setCurrentMileage(newMileage);
-                                        // Auto-update next service mileage (+20000 km)
-                                        if (newMileage) {
-                                            setNextServiceMileage((parseFloat(newMileage) + 20000).toString());
-                                        }
-                                    }}
-                                    placeholder="e.g., 125000"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>{t("Service Type")}</Label>
-                                <Select value={serviceType} onValueChange={setServiceType}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder={t("Select service type")} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {SERVICE_TYPES.map((type) => (
-                                            <SelectItem key={type.value} value={type.value}>
-                                                {t(type.label)}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
+            {view === "list" ? (
+                <div className="space-y-6">
+                    <MaintenanceHistoryList history={history} onNewClick={() => setView("form")} />
+                </div>
+            ) : (
+                <Card className="border-t-4 border-t-blue-500 shadow-md">
+                    <CardHeader>
+                        <CardTitle>{t("New Maintenance Record")}</CardTitle>
+                        <CardDescription>{t("Record a new service or repair job")}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={handleSave} className="space-y-8">
 
-                        {/* Row 2: Service Date & Cost */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                                <Label>{t("Service Date")}</Label>
-                                <Input
-                                    type="date"
-                                    value={serviceDate}
-                                    onChange={(e) => setServiceDate(e.target.value)}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>{t("Service Cost (THB)")}</Label>
-                                <Input
-                                    type="number"
-                                    value={serviceCost}
-                                    onChange={(e) => setServiceCost(e.target.value)}
-                                    placeholder="0.00"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Row 3: Next Service Mileage (auto-calculated) */}
-                        <div className="space-y-2">
-                            <Label>{t("Next Service Mileage (km)")}</Label>
-                            <Input
-                                type="number"
-                                value={nextServiceMileage}
-                                readOnly
-                                disabled
-                                className="bg-muted/50 max-w-xs"
-                                placeholder="Auto-calculated"
-                            />
-                            <p className="text-xs text-muted-foreground">
-                                {t("Auto-calculated: Current Mileage + 20,000 km")}
-                            </p>
-                        </div>
-
-                        {/* Row 4: Service Provider */}
-                        <div className="space-y-2">
-                            <Label>{t("Service Provider")}</Label>
-                            <Input
-                                value={serviceProvider}
-                                onChange={(e) => setServiceProvider(e.target.value)}
-                                placeholder={t("Garage / Mechanic name")}
-                            />
-                        </div>
-
-                        {/* Row 5: Notes */}
-                        <div className="space-y-2">
-                            <Label>{t("Notes")}</Label>
-                            <textarea
-                                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                value={notes}
-                                onChange={(e) => setNotes(e.target.value)}
-                                placeholder={t("Additional notes about the service...")}
-                            />
-                        </div>
-
-                        {/* Row 6: Document Upload */}
-                        <div className="space-y-3">
-                            <Label>{t("Receipt / Document")}</Label>
-                            {existingFileUrl ? (
-                                <div className="flex items-center gap-3 p-3 border rounded-md bg-muted/20">
-                                    <FileText className="h-8 w-8 text-blue-500" />
-                                    <div className="flex-1 overflow-hidden">
-                                        <p className="text-sm font-medium truncate">{t("Uploaded Document")}</p>
-                                        <a href={existingFileUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
-                                            {t("View / Download")}
-                                        </a>
-                                    </div>
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => setExistingFileUrl(undefined)}
-                                        className="text-muted-foreground hover:text-destructive"
+                            {/* Type Selection */}
+                            <div className="space-y-3">
+                                <Label className="text-base">{t("Maintenance Type")}</Label>
+                                <div className="flex gap-4">
+                                    <div
+                                        onClick={() => setType("PM")}
+                                        className={`flex items-center space-x-2 border p-3 rounded-lg flex-1 cursor-pointer transition-colors ${type === 'PM' ? 'border-blue-500 bg-blue-500/10 ring-1 ring-blue-500' : 'hover:bg-muted/50'}`}
                                     >
-                                        {t("Replace")}
-                                    </Button>
+                                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${type === 'PM' ? 'border-blue-600' : 'border-muted-foreground'}`}>
+                                            {type === 'PM' && <div className="w-2 h-2 rounded-full bg-blue-600" />}
+                                        </div>
+                                        <div className="flex-1">
+                                            <span className="font-semibold block">{t("Preventive (PM)")}</span>
+                                            <span className="text-xs text-muted-foreground">{t("Scheduled maintenance, oil change, checkups")}</span>
+                                        </div>
+                                    </div>
+                                    <div
+                                        onClick={() => setType("CM")}
+                                        className={`flex items-center space-x-2 border p-3 rounded-lg flex-1 cursor-pointer transition-colors ${type === 'CM' ? 'border-red-500 bg-red-500/10 ring-1 ring-red-500' : 'hover:bg-muted/50'}`}
+                                    >
+                                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${type === 'CM' ? 'border-red-600' : 'border-muted-foreground'}`}>
+                                            {type === 'CM' && <div className="w-2 h-2 rounded-full bg-red-600" />}
+                                        </div>
+                                        <div className="flex-1">
+                                            <span className="font-semibold block">{t("Corrective (CM)")}</span>
+                                            <span className="text-xs text-muted-foreground">{t("Repairs, accidents, fix upon failure")}</span>
+                                        </div>
+                                    </div>
                                 </div>
-                            ) : (
-                                <div className="border-2 border-dashed border-input hover:bg-muted/50 transition-colors rounded-lg p-6 flex flex-col items-center justify-center gap-2 cursor-pointer text-muted-foreground relative">
-                                    <input
-                                        type="file"
-                                        className="absolute inset-0 opacity-0 cursor-pointer"
-                                        onChange={handleFileChange}
-                                        accept="image/*,application/pdf"
-                                    />
-                                    <Upload className="h-8 w-8" />
-                                    <span className="text-sm font-medium">{selectedFile ? selectedFile.name : t("Click to upload Receipt / Document")}</span>
-                                    {!selectedFile && <span className="text-xs text-muted-foreground/75">PDF, JPG, PNG up to 10MB</span>}
-                                </div>
-                            )}
-                        </div>
+                            </div>
 
-                        {/* Actions */}
-                        <div className="flex justify-end gap-3 pt-6 border-t">
-                            <Button type="button" variant="ghost" onClick={() => router.back()}>
-                                {t("Cancel")}
-                            </Button>
-                            <Button
-                                type="submit"
-                                className="bg-yellow-600 hover:bg-yellow-700 text-white"
-                                disabled={isSubmitting || !serviceDate}
-                            >
-                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
-                                {t("Save Service Record")}
-                            </Button>
-                        </div>
-                    </form>
-                </CardContent>
-            </Card>
+                            {/* Service Details */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <Label>{t("Issue / Service Name")}</Label>
+                                    {type === "PM" ? (
+                                        <Select value={serviceType} onValueChange={setServiceType}>
+                                            <SelectTrigger><SelectValue placeholder="Select Service" /></SelectTrigger>
+                                            <SelectContent>
+                                                {SERVICE_TYPES_PM.map(s => <SelectItem key={s.value} value={s.label}>{t(s.label)}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    ) : (
+                                        <Input
+                                            placeholder={t("Describe the issue (e.g., Broken Mirror)")}
+                                            value={customServiceType}
+                                            onChange={e => setCustomServiceType(e.target.value)}
+                                        />
+                                    )}
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>{t("Service Provider (Garage)")}</Label>
+                                    <Input
+                                        placeholder={t("Enter garage name")}
+                                        value={provider}
+                                        onChange={e => setProvider(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Status & Dates */}
+                            <div className="p-4 bg-muted/20 rounded-lg space-y-4">
+                                <h3 className="font-semibold text-sm text-foreground/80 flex items-center gap-2">
+                                    <Clock className="w-4 h-4" /> {t("Status & Validation")}
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="space-y-2">
+                                        <Label>{t("Job Status")}</Label>
+                                        <Select value={status} onValueChange={(v: "in_progress" | "completed") => setStatus(v)}>
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="in_progress">
+                                                    <span className="flex items-center gap-2 text-amber-600"><Loader2 className="w-4 h-4" /> In Progress (Truck Unavailable)</span>
+                                                </SelectItem>
+                                                <SelectItem value="completed">
+                                                    <span className="flex items-center gap-2 text-green-600"><CheckCircle2 className="w-4 h-4" /> Completed (Truck Available)</span>
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>{t("Start Date")}</Label>
+                                        <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                                    </div>
+                                    {status === "completed" && (
+                                        <div className="space-y-2">
+                                            <Label>{t("End Date")}</Label>
+                                            <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Costs */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="space-y-2">
+                                    <Label>{t("Labor Cost")}</Label>
+                                    <Input type="number" placeholder="0.00" value={costLabor} onChange={e => setCostLabor(e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>{t("Parts / Material Cost")}</Label>
+                                    <Input type="number" placeholder="0.00" value={costParts} onChange={e => setCostParts(e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>{t("Total Cost")}</Label>
+                                    <Input disabled value={((parseFloat(costLabor) || 0) + (parseFloat(costParts) || 0)).toFixed(2)} className="bg-muted font-bold" />
+                                </div>
+                            </div>
+
+                            {/* Mileage */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <Label>{t("Odometer Reading (Current)")}</Label>
+                                    <Input type="number" value={currentMileage} onChange={e => {
+                                        setCurrentMileage(e.target.value);
+                                        // Auto calc next service if PM
+                                        if (type === 'PM' && e.target.value) {
+                                            setNextServiceMileage((parseFloat(e.target.value) + 10000).toString());
+                                        }
+                                    }} />
+                                </div>
+                                {type === "PM" && (
+                                    <div className="space-y-2">
+                                        <Label>{t("Next Service Distance")}</Label>
+                                        <Input type="number" value={nextServiceMileage} onChange={e => setNextServiceMileage(e.target.value)} />
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Upload & Notes */}
+                            <div className="space-y-2">
+                                <Label>{t("Receipt / Photo")}</Label>
+                                <div className="border border-dashed rounded-lg p-4 bg-background">
+                                    <Input type="file" onChange={handleFileChange} />
+                                    {selectedFile && <p className="text-xs text-muted-foreground mt-2">{selectedFile.name}</p>}
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>{t("Notes")}</Label>
+                                <Input value={notes} onChange={e => setNotes(e.target.value)} />
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-4 border-t">
+                                <Button type="button" variant="ghost" onClick={() => setView("list")}>{t("Cancel")}</Button>
+                                <Button type="submit" disabled={isSubmitting}>{isSubmitting ? <Loader2 className="animate-spin" /> : t("Save Record")}</Button>
+                            </div>
+                        </form>
+                    </CardContent>
+                </Card>
+            )}
         </div>
+    );
+}
+
+function MaintenanceHistoryList({ history, onNewClick }: { history: MaintenanceData[], onNewClick: () => void }) {
+    const { t } = useLanguage();
+    if (history.length === 0) {
+        return (
+            <div className="text-center py-12 bg-muted/10 rounded-xl border border-dashed">
+                <Wrench className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium">{t("No Maintenance Records")}</h3>
+                <p className="text-muted-foreground mb-6">{t("Start tracking repairs and services for this vehicle.")}</p>
+                <Button onClick={onNewClick}><Plus className="w-4 h-4 mr-2" /> {t("New Record")}</Button>
+            </div>
+        )
+    }
+
+    return (
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>{t("Service History")}</CardTitle>
+                <Button onClick={onNewClick} size="sm"><Plus className="w-4 h-4 mr-2" /> {t("Add Record")}</Button>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-4">
+                    {history.map((record) => (
+                        <div key={record.id} className="flex items-start justify-between p-4 border rounded-lg hover:bg-muted/30 transition-colors">
+                            <div className="flex gap-4">
+                                <div className={`p-3 rounded-full ${record.type === 'PM' ? 'bg-blue-100 text-blue-600' : 'bg-red-100 text-red-600'}`}>
+                                    {record.type === 'PM' ? <History className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <p className="font-semibold">{record.serviceType}</p>
+                                        <Badge variant="outline" className="text-xs">{record.status.replace("_", " ")}</Badge>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground">{record.startDate} {record.endDate ? ` - ${record.endDate}` : ''} • {record.provider}</p>
+                                    {record.notes && <p className="text-sm italic text-muted-foreground mt-1">"{record.notes}"</p>}
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <p className="font-bold text-lg">฿{record.totalCost?.toLocaleString() || "0"}</p>
+                                <p className="text-xs text-muted-foreground">Labor: {record.costLabor || 0} | Parts: {record.costParts || 0}</p>
+                                <p className="text-xs mt-1 text-muted-foreground">{record.currentMileage?.toLocaleString()} km</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </CardContent>
+        </Card>
     );
 }

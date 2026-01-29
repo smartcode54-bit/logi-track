@@ -27,6 +27,9 @@ export const COLLECTIONS = {
 
     /** Financial transactions (Tax, Insurance, Maintenance) */
     TRANSACTIONS: "transactions",
+
+    /** Maintenance history records */
+    MAINTENANCE: "maintenance",
 } as const;
 
 /** Type for collection names */

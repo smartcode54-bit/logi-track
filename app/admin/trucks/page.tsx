@@ -342,6 +342,7 @@ export default function TrucksListPage() {
                             <TableHead className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Model</TableHead>
                             <TableHead className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Ownership</TableHead>
                             <TableHead className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Tax/Insu.</TableHead>
+                            <TableHead className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">PM Status</TableHead>
                             <TableHead className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Status</TableHead>
                             <TableHead className="text-right text-xs font-semibold tracking-wider text-muted-foreground uppercase">Actions</TableHead>
                         </TableRow>
@@ -456,6 +457,51 @@ export default function TrucksListPage() {
                                                 }
 
                                                 // Otherwise show single OK (both completed or no issues)
+                                                return (
+                                                    <span className="text-xs text-green-600 flex items-center gap-1">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500" /> OK
+                                                    </span>
+                                                );
+                                            })()}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-col gap-1">
+                                            {(() => {
+                                                const km = truck.nextServiceMileage && truck.currentMileage ? truck.nextServiceMileage - truck.currentMileage : null;
+                                                const days = truck.nextServiceDate ? Math.ceil((new Date(truck.nextServiceDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : null;
+
+                                                let pmBadge: ReactNode = null;
+
+                                                if (truck.truckStatus === 'maintenance') {
+                                                    pmBadge = <Badge variant="secondary" className="text-[10px] px-1 py-0 h-5 w-fit bg-yellow-100 text-yellow-700 border-yellow-200">In Shop</Badge>;
+                                                } else if (km !== null && km < 0) {
+                                                    pmBadge = <Badge variant="destructive" className="text-[10px] px-1 py-0 h-5 w-fit">PM: {-km}km Over</Badge>;
+                                                } else if (days !== null && days < 0) {
+                                                    pmBadge = <Badge variant="destructive" className="text-[10px] px-1 py-0 h-5 w-fit">PM: Overdue</Badge>;
+                                                } else if (km !== null && km <= 1000) {
+                                                    pmBadge = <Badge variant="outline" className="text-[10px] px-1 py-0 h-5 w-fit text-orange-600 border-orange-600 bg-orange-50">PM: {km}km</Badge>;
+                                                } else if (days !== null && days <= 30) {
+                                                    pmBadge = <Badge variant="outline" className="text-[10px] px-1 py-0 h-5 w-fit text-orange-600 border-orange-600 bg-orange-50">PM: {days}d</Badge>;
+                                                }
+
+                                                if (pmBadge) {
+                                                    return (
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Link href={`/admin/trucks/maintenance?id=${truck.id}`} onClick={(e) => e.stopPropagation()} className="hover:opacity-80 transition-opacity w-fit">
+                                                                        {pmBadge}
+                                                                    </Link>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Record Maintenance</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    );
+                                                }
+
                                                 return (
                                                     <span className="text-xs text-green-600 flex items-center gap-1">
                                                         <div className="w-1.5 h-1.5 rounded-full bg-green-500" /> OK

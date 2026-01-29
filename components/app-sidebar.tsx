@@ -70,10 +70,19 @@ export function AppSidebar() {
                     url: "/admin/renewals",
                 },
                 {
+                    title: "Maintenance Costs",
+                    url: "/admin/maintenance",
+                },
+                {
                     title: "Manage Subcontractors",
                     url: "/admin/subcontractors",
                 },
             ],
+        },
+        {
+            title: "Driver Management",
+            url: "/admin/driver",
+            icon: User,
         },
         {
             title: "Active Shipments",
