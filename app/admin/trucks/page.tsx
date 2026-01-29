@@ -364,7 +364,7 @@ export default function TrucksListPage() {
                             </TableRow>
                         ) : (
                             paginatedTrucks.map((truck) => (
-                                <TableRow key={truck.id} className="cursor-pointer hover:bg-muted/50 transition-colors border-b border-border/50" onClick={() => router.push(`/admin/trucks/${truck.id}`)}>
+                                <TableRow key={truck.id} className="cursor-pointer hover:bg-muted/50 transition-colors border-b border-border/50" onClick={() => router.push(`/admin/trucks/view?id=${truck.id}`)}>
                                     <TableCell className="font-mono text-sm text-muted-foreground">
                                         {truck.id.slice(0, 8).toUpperCase()}
                                     </TableCell>
@@ -481,7 +481,7 @@ export default function TrucksListPage() {
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                 <DropdownMenuItem asChild>
-                                                    <Link href={`/admin/trucks/${truck.id}`} className="flex items-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                                                    <Link href={`/admin/trucks/view?id=${truck.id}`} className="flex items-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
                                                         <Eye className="mr-2 h-4 w-4" />
                                                         View Details
                                                     </Link>

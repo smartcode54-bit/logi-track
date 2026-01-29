@@ -106,6 +106,13 @@ export default function AdminLayout({
         else document.documentElement.classList.remove('dark');
     }, []);
 
+    // Auth Redirect Logic
+    useEffect(() => {
+        if (!authContext?.loading && !currentUser) {
+            router.push("/login");
+        }
+    }, [currentUser, authContext?.loading, router]);
+
     const toggleTheme = () => {
         const newIsDark = !isDark;
         setIsDark(newIsDark);

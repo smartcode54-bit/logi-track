@@ -1,6 +1,8 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
     ArrowLeft, Edit, Truck, Calendar, User, FileText, Info, Loader2, Camera,
     MapPin, Phone, Shield, MoreHorizontal, Download, Plus,
@@ -18,9 +20,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useBreadcrumb } from "@/context/breadcrumb";
 
 export default function TruckPreviewClient() {
-    const params = useParams();
+    const searchParams = useSearchParams();
     const router = useRouter();
-    const truckId = params.id as string;
+    const truckId = searchParams.get('id');
     const { setCustomLastItem } = useBreadcrumb();
 
     const [truck, setTruck] = useState<TruckData | null>(null);
@@ -33,6 +35,11 @@ export default function TruckPreviewClient() {
 
     useEffect(() => {
         const fetchTruck = async () => {
+            if (!truckId) {
+                setError("No truck ID provided");
+                setIsLoading(false);
+                return;
+            }
             try {
                 setIsLoading(true);
                 setError(null);
@@ -51,9 +58,7 @@ export default function TruckPreviewClient() {
             }
         };
 
-        if (truckId) {
-            fetchTruck();
-        }
+        fetchTruck();
 
         // Cleanup breadcrumb on unmount
         return () => {
@@ -168,13 +173,13 @@ export default function TruckPreviewClient() {
                 </div>
                 <div className="flex items-center gap-3">
                     <Button asChild variant="outline" className="gap-2 bg-yellow-600 hover:bg-yellow-700 text-white">
-                        <Link href={`/admin/trucks/${truck.id}/maintenance`}>
+                        <Link href={`/admin/trucks/maintenance?id=${truck.id}`}>
                             <Wrench className="h-4 w-4" />
                             Maintenance
                         </Link>
                     </Button>
                     <Button asChild className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
-                        <Link href={`/admin/trucks/${truck.id}/edit`}>
+                        <Link href={`/admin/trucks/edit?id=${truck.id}`}>
                             <Edit className="h-4 w-4" />
                             Edit Details
                         </Link>
