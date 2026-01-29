@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatLicensePlate } from "@/lib/utils";
 import { TruckValidatedData } from "@/validate/truckSchema";
 import { type ReactNode } from "react";
+import { toast } from "sonner";
 
 export default function RenewalClient() {
     const { t } = useLanguage();
@@ -294,10 +295,14 @@ function RenewalForm({ type, truck, onSuccess }: { type: "tax" | "insurance", tr
             setStatus(nextStatus);
             if (newFileUrl) setExistingFileUrl(newFileUrl);
             setSelectedFile(null);
-            onSuccess();
 
             if (nextStatus === 'completed') {
-                router.push(`/admin/trucks/view?id=${truck.id}`); // Redirect to view to see history
+                toast.success(`${type === 'tax' ? 'Tax' : 'Insurance'} Renewal Completed Successfully`);
+                onSuccess();
+                router.push(`/admin/trucks/view?id=${truck.id}`);
+            } else {
+                toast.success("Progress saved successfully");
+                onSuccess();
             }
 
         } catch (error) {
