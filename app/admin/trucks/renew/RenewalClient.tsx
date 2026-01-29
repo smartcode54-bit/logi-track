@@ -284,7 +284,7 @@ function RenewalForm({ type, truck, onSuccess }: { type: "tax" | "insurance", tr
                     amount: parseFloat(expense || "0"),
                     paymentMethod: paymentMethod || "Unknown",
                     date: new Date().toISOString().split('T')[0], // Today's date
-                    receiptUrl: newFileUrl || undefined,
+                    receiptUrl: newFileUrl || null,
                     performedBy: currentUser.displayName || currentUser.email || "Unknown",
                     notes: type === 'tax' ? `Expiry: ${expiryDate}` : `Policy: ${policyNumber} | Expiry: ${expiryDate}`
                 };
