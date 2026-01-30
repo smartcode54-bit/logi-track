@@ -12,10 +12,7 @@ export const driverSchema = z.object({
     mobile: z.string().min(1, "Mobile number is required"), // เบอร์โทรศัพท์
     email: z.string().email("Invalid email address").optional().or(z.literal("")), // อีเมล
     profileImage: z.string().optional(), // ลิงก์รูปโปรไฟล์จาก Storage
-    birthDate: z.date({
-        required_error: "Birth Date is required",
-        invalid_type_error: "Birth Date is required"
-    })
+    birthDate: z.date()
         .refine((date) => {
             const today = new Date();
             const age = today.getFullYear() - date.getFullYear();
@@ -51,6 +48,16 @@ export const driverSchema = z.object({
     // Status & Work
     status: z.enum(DRIVER_STATUS_ENUM).default("Active"), // เช่น Active, Inactive, On-Duty
     assignToProject: z.string().optional(), // โปรเจกต์ที่ได้รับมอบหมายในปัจจุบัน
+
+    // Audit Log
+    statusHistory: z.array(z.object({
+        status: z.string(),
+        changedAt: z.any(), // Firestore Timestamp
+        changedBy: z.string(),
+        changedByName: z.string().optional(),
+        reason: z.string().optional(),
+        previousStatus: z.string().optional()
+    })).optional().default([]),
 
     // Legacy/Compatibility fields (optional or derived) - keeping for safety based on previous usage
     currentTruckId: z.string().optional().nullable(),

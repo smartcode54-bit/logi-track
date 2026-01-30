@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { collection, query, orderBy, onSnapshot, limit } from "firebase/firestore";
 import { db } from "@/firebase/client";
 import { COLLECTIONS } from "@/lib/collections";
@@ -12,7 +13,8 @@ import {
     Users,
     Activity,
     CalendarOff,
-    MoreHorizontal
+    MoreHorizontal,
+    Plus
 } from "lucide-react";
 import {
     DropdownMenu,
@@ -34,7 +36,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { RegisterDriverDialog } from "./view/RegisterDriverDialog";
+
 
 export default function DriversListPage() {
     const router = useRouter();
@@ -141,7 +143,12 @@ export default function DriversListPage() {
                         <Download className="h-4 w-4" />
                         Export
                     </Button>
-                    <RegisterDriverDialog />
+                    <Button asChild>
+                        <Link href="/admin/drivers/new">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add New Driver
+                        </Link>
+                    </Button>
                 </div>
             </div>
 
@@ -262,7 +269,7 @@ export default function DriversListPage() {
                                 </TableRow>
                             ) : (
                                 paginatedDrivers.map((driver) => (
-                                    <TableRow key={driver.id} className="cursor-pointer hover:bg-muted/50 transition-colors border-b border-border/50" onClick={() => router.push(`/admin/drivers/${driver.id}`)}>
+                                    <TableRow key={driver.id} className="cursor-pointer hover:bg-muted/50 transition-colors border-b border-border/50" onClick={() => router.push(`/admin/drivers/view?id=${driver.id}`)}>
                                         <TableCell>
                                             <div className="flex items-center gap-3">
                                                 <Avatar className="h-9 w-9 border border-border">
@@ -302,8 +309,8 @@ export default function DriversListPage() {
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                    <DropdownMenuItem onClick={() => router.push(`/admin/drivers/${driver.id}`)}>View Profile</DropdownMenuItem>
-                                                    <DropdownMenuItem>Edit Details</DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => router.push(`/admin/drivers/view?id=${driver.id}`)}>View Profile</DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => router.push(`/admin/drivers/edit?id=${driver.id}`)}>Edit Details</DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </TableCell>
