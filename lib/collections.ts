@@ -22,6 +22,9 @@ export const COLLECTIONS = {
     /** Driver-to-truck assignments */
     ASSIGNMENTS: "assignments",
 
+    /** Drivers personnel */
+    DRIVERS: "drivers",
+
     /** Waitlist signups */
     WAITLIST: "waitlist",
 

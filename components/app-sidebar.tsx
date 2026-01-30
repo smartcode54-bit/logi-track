@@ -81,7 +81,7 @@ export function AppSidebar() {
         },
         {
             title: "Driver Management",
-            url: "/admin/driver",
+            url: "/admin/drivers",
             icon: User,
         },
         {
