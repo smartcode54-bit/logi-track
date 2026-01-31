@@ -24,10 +24,11 @@ export const driverSchema = z.object({
         }, "Driver must be between 20 and 55 years old"),
 
     // Identity & License
-    idCard: z.string().min(1, "ID Card Info is required"), // เลขบัตรประชาชน
+    idCard: z.string().length(13, "ID Card must be exactly 13 digits"), // เลขบัตรประชาชน
     idCardExpiredDate: z.date().optional(), // วันหมดอายุบัตรประชาชน
     idCardImage: z.string().optional(), // รูปถ่ายบัตรประชาชน
-    truckLicenseId: z.string().min(1, "Truck License ID is required"), // เลขที่ใบอนุญาตขับขี่รถบรรทุก
+    truckLicenseId: z.string().length(8, "Truck License ID must be exactly 8 characters"), // เลขที่ใบอนุญาตขับขี่รถบรรทุก
+    licenseType: z.enum(["บ.1", "บ.2", "บ.3", "บ.4", "ท.1", "ท.2", "ท.3", "ท.4"]).optional(), // ประเภทใบขับขี่
     truckLicenseExpiredDate: z.date().optional(), // วันหมดอายุใบขับขี่
     truckLicenseImage: z.string().optional(), // รูปถ่ายใบขับขี่
 
@@ -61,6 +62,12 @@ export const driverSchema = z.object({
 
     // Legacy/Compatibility fields (optional or derived) - keeping for safety based on previous usage
     currentTruckId: z.string().optional().nullable(),
+    currentAssignment: z.object({
+        truckId: z.string(),
+        truckPlate: z.string(),
+        assignedAt: z.any(), // Firestore Timestamp
+        assignmentId: z.string()
+    }).optional().nullable(),
 
     createdAt: z.date().optional(),
     updatedAt: z.date().optional(),

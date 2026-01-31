@@ -33,8 +33,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DatePicker } from "@/components/ui/date-picker";
 import { format } from "date-fns";
 import { db } from "@/firebase/client";
 import { collection, getDocs, query } from "firebase/firestore";
@@ -256,13 +255,12 @@ export default function NewDriverPage() {
                                                     return (
                                                         <FormItem>
                                                             <FormLabel>Birth Date (Age 20-55) <span className="text-red-500">*</span></FormLabel>
-                                                            <DriverDatePicker
+                                                            <DatePicker
                                                                 value={field.value}
                                                                 onChange={field.onChange}
                                                                 fromYear={minDate.getFullYear()}
                                                                 toYear={maxDate.getFullYear()}
                                                                 disabled={(d: Date) => d > maxDate || d < minDate}
-                                                                defaultMonth={maxDate}
                                                             />
                                                             <FormMessage />
                                                         </FormItem>
@@ -282,11 +280,11 @@ export default function NewDriverPage() {
                                                 <div className="p-4 border rounded-lg bg-slate-50 dark:bg-slate-900/50 space-y-4">
                                                     <h3 className="font-semibold flex items-center gap-2"><User className="h-4 w-4" /> National ID Card</h3>
                                                     <FormField control={form.control} name="idCard" render={({ field }) => (
-                                                        <FormItem><FormLabel>ID Number <span className="text-red-500">*</span></FormLabel><FormControl><Input placeholder="13-digit ID" {...field} /></FormControl><FormMessage /></FormItem>
+                                                        <FormItem><FormLabel>ID Number <span className="text-red-500">*</span></FormLabel><FormControl><Input placeholder="13-digit ID" maxLength={13} {...field} /></FormControl><FormMessage /></FormItem>
                                                     )} />
                                                     <div className="grid md:grid-cols-2 gap-4">
                                                         <FormField control={form.control} name="idCardExpiredDate" render={({ field }) => (
-                                                            <FormItem><FormLabel>Expiry Date</FormLabel><DriverDatePicker value={field.value} onChange={field.onChange} fromYear={new Date().getFullYear()} toYear={new Date().getFullYear() + 10} /><FormMessage /></FormItem>
+                                                            <FormItem><FormLabel>Expiry Date</FormLabel><DatePicker value={field.value} onChange={field.onChange} fromYear={new Date().getFullYear()} toYear={new Date().getFullYear() + 10} /><FormMessage /></FormItem>
                                                         )} />
                                                         <FormItem>
                                                             <FormLabel>Upload Image</FormLabel>
@@ -300,12 +298,33 @@ export default function NewDriverPage() {
 
                                                 <div className="p-4 border rounded-lg bg-slate-50 dark:bg-slate-900/50 space-y-4">
                                                     <h3 className="font-semibold flex items-center gap-2"><Truck className="h-4 w-4" /> Driving License</h3>
-                                                    <FormField control={form.control} name="truckLicenseId" render={({ field }) => (
-                                                        <FormItem><FormLabel>License Number <span className="text-red-500">*</span></FormLabel><FormControl><Input placeholder="License No." {...field} /></FormControl><FormMessage /></FormItem>
-                                                    )} />
+                                                    <div className="grid md:grid-cols-2 gap-4">
+                                                        <FormField control={form.control} name="truckLicenseId" render={({ field }) => (
+                                                            <FormItem><FormLabel>License Number <span className="text-red-500">*</span></FormLabel><FormControl><Input placeholder="License No." maxLength={8} {...field} /></FormControl><FormMessage /></FormItem>
+                                                        )} />
+                                                        <FormField control={form.control} name="licenseType" render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>License Type</FormLabel>
+                                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                                    <FormControl><SelectTrigger value={field.value}><SelectValue placeholder="Select..." /></SelectTrigger></FormControl>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="บ.1">บ.1</SelectItem>
+                                                                        <SelectItem value="บ.2">บ.2</SelectItem>
+                                                                        <SelectItem value="บ.3">บ.3</SelectItem>
+                                                                        <SelectItem value="บ.4">บ.4</SelectItem>
+                                                                        <SelectItem value="ท.1">ท.1</SelectItem>
+                                                                        <SelectItem value="ท.2">ท.2</SelectItem>
+                                                                        <SelectItem value="ท.3">ท.3</SelectItem>
+                                                                        <SelectItem value="ท.4">ท.4</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )} />
+                                                    </div>
                                                     <div className="grid md:grid-cols-2 gap-4">
                                                         <FormField control={form.control} name="truckLicenseExpiredDate" render={({ field }) => (
-                                                            <FormItem><FormLabel>Expiry Date</FormLabel><DriverDatePicker value={field.value} onChange={field.onChange} fromYear={new Date().getFullYear()} toYear={new Date().getFullYear() + 10} /><FormMessage /></FormItem>
+                                                            <FormItem><FormLabel>Expiry Date</FormLabel><DatePicker value={field.value} onChange={field.onChange} fromYear={new Date().getFullYear()} toYear={new Date().getFullYear() + 10} /><FormMessage /></FormItem>
                                                         )} />
                                                         <FormItem>
                                                             <FormLabel>Upload Image</FormLabel>
@@ -434,19 +453,4 @@ export default function NewDriverPage() {
     );
 }
 
-function DriverDatePicker({ value, onChange, fromYear, toYear, disabled, defaultMonth }: any) {
-    const [open, setOpen] = useState(false);
-    return (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-                <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !value && "text-muted-foreground")}>
-                    {value ? format(value, "PPP") : <span>Pick a date</span>}
-                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={value} onSelect={(d: Date | undefined) => { onChange(d); setOpen(false); }} fromYear={fromYear} toYear={toYear} disabled={disabled} defaultMonth={value || defaultMonth} initialFocus captionLayout="dropdown" />
-            </PopoverContent>
-        </Popover>
-    );
-}
+

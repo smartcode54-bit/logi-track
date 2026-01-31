@@ -8,6 +8,8 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
+import { format } from "date-fns";
 import {
     Select,
     SelectContent,
@@ -200,11 +202,14 @@ export function InsuranceSection({ onFileSelect }: InsuranceSectionProps) {
                         control={control}
                         name="insuranceStartDate"
                         render={({ field }) => (
-                            <FormItem>
+                            <FormItem className="flex flex-col">
                                 <FormLabel>Start Date</FormLabel>
-                                <FormControl>
-                                    <Input type="date" {...field} />
-                                </FormControl>
+                                <DatePicker
+                                    value={field.value ? new Date(field.value) : undefined}
+                                    onChange={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
+                                    fromYear={new Date().getFullYear() - 5}
+                                    toYear={new Date().getFullYear() + 5}
+                                />
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -213,11 +218,14 @@ export function InsuranceSection({ onFileSelect }: InsuranceSectionProps) {
                         control={control}
                         name="insuranceExpiryDate"
                         render={({ field }) => (
-                            <FormItem>
+                            <FormItem className="flex flex-col">
                                 <FormLabel>End Date</FormLabel>
-                                <FormControl>
-                                    <Input type="date" {...field} />
-                                </FormControl>
+                                <DatePicker
+                                    value={field.value ? new Date(field.value) : undefined}
+                                    onChange={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
+                                    fromYear={new Date().getFullYear()}
+                                    toYear={new Date().getFullYear() + 10}
+                                />
                                 <FormMessage />
                             </FormItem>
                         )}

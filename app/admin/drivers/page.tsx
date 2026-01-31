@@ -74,6 +74,8 @@ export default function DriversListPage() {
                     status: data.status || "Active",
                     employmentType: data.employmentType || "FULL_TIME",
                     truckLicenseId: data.truckLicenseId || "",
+                    // Assignment - Map directly from document
+                    currentAssignment: data.currentAssignment,
                     ...data,
                     createdAt
                 } as Driver);
@@ -246,7 +248,9 @@ export default function DriversListPage() {
                                 <TableHead className="uppercase text-xs font-semibold text-muted-foreground tracking-wider">Driver</TableHead>
                                 <TableHead className="uppercase text-xs font-semibold text-muted-foreground tracking-wider">Contact</TableHead>
                                 <TableHead className="uppercase text-xs font-semibold text-muted-foreground tracking-wider">Employment</TableHead>
+                                <TableHead className="uppercase text-xs font-semibold text-muted-foreground tracking-wider">Assigned Vehicle</TableHead>
                                 <TableHead className="uppercase text-xs font-semibold text-muted-foreground tracking-wider">License ID</TableHead>
+                                <TableHead className="uppercase text-xs font-semibold text-muted-foreground tracking-wider">License Type</TableHead>
                                 <TableHead className="uppercase text-xs font-semibold text-muted-foreground tracking-wider">Status</TableHead>
                                 <TableHead className="text-right uppercase text-xs font-semibold text-muted-foreground tracking-wider">Actions</TableHead>
                             </TableRow>
@@ -292,7 +296,20 @@ export default function DriversListPage() {
                                             </div>
                                         </TableCell>
                                         <TableCell>
+                                            {driver.currentAssignment ? (
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium text-sm text-blue-600">{driver.currentAssignment.truckPlate}</span>
+                                                    <span className="text-xs text-muted-foreground">{(driver.currentAssignment as any).truckModel}</span>
+                                                </div>
+                                            ) : (
+                                                <span className="text-muted-foreground text-xs italic">Unassigned</span>
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
                                             <span className="font-mono text-xs">{driver.truckLicenseId}</span>
+                                        </TableCell>
+                                        <TableCell>
+                                            <span className="text-sm text-muted-foreground">{driver.licenseType || "-"}</span>
                                         </TableCell>
                                         <TableCell>
                                             <Badge variant="secondary" className={`${getStatusColor(driver.status)} font-medium border`}>

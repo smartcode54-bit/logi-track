@@ -26,6 +26,18 @@ export interface TruckData {
     registrationDate: string;
     buyingDate: string;
     notes?: string;
+
+    // Assignment - Denormalized
+    // Assignment - Denormalized
+    currentAssignments?: {
+        driverId: string;
+        driverName: string;
+        assignedAt: Date;
+        assignmentId: string;
+    }[];
+    // Deprecated single assignment for backward compatibility if needed, but we migrate fully.
+    currentAssignment?: never; // Explicitly ensure we don't use it.
+
     // Images
     imageFrontRight?: string;
     imageFrontLeft?: string;
@@ -142,6 +154,21 @@ export async function getTrucksClient(): Promise<TruckData[]> {
                 buyingDate: data.buyingDate || "",
                 notes: data.notes || "",
 
+                // Assignment - Denormalized
+                // Assignment - Denormalized
+                currentAssignments: data.currentAssignments ? (data.currentAssignments as any[]).map(assignment => ({
+                    driverId: assignment.driverId,
+                    driverName: assignment.driverName,
+                    assignedAt: formatTimestamp(assignment.assignedAt) as Date,
+                    assignmentId: assignment.assignmentId
+                })) : (data.currentAssignment ? [{
+                    // Fallback for legacy single assignment data during migration
+                    driverId: data.currentAssignment.driverId,
+                    driverName: data.currentAssignment.driverName,
+                    assignedAt: formatTimestamp(data.currentAssignment.assignedAt) as Date,
+                    assignmentId: data.currentAssignment.assignmentId
+                }] : []),
+
                 // New Fields
                 imageFrontRight: data.imageFrontRight || "",
                 imageFrontLeft: data.imageFrontLeft || "",
@@ -226,6 +253,21 @@ export async function getTruckByIdClient(id: string): Promise<TruckData | null> 
             registrationDate: data.registrationDate || "",
             buyingDate: data.buyingDate || "",
             notes: data.notes || "",
+
+            // Assignment - Denormalized
+            // Assignment - Denormalized
+            currentAssignments: data.currentAssignments ? (data.currentAssignments as any[]).map(assignment => ({
+                driverId: assignment.driverId,
+                driverName: assignment.driverName,
+                assignedAt: formatTimestamp(assignment.assignedAt) as Date,
+                assignmentId: assignment.assignmentId
+            })) : (data.currentAssignment ? [{
+                // Fallback for legacy single assignment data
+                driverId: data.currentAssignment.driverId,
+                driverName: data.currentAssignment.driverName,
+                assignedAt: formatTimestamp(data.currentAssignment.assignedAt) as Date,
+                assignmentId: data.currentAssignment.assignmentId
+            }] : []),
 
             // New Fields
             imageFrontRight: data.imageFrontRight || "",

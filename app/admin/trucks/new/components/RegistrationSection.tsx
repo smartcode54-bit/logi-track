@@ -11,6 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useFormContext } from "react-hook-form";
 import { useLanguage } from "@/context/language";
 import { FileText } from "lucide-react";
+import { DatePicker } from "@/components/ui/date-picker";
+import { format } from "date-fns";
 
 export function RegistrationSection() {
     const { control } = useFormContext();
@@ -25,16 +27,20 @@ export function RegistrationSection() {
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
                         control={control}
                         name="taxExpiryDate"
                         render={({ field }) => (
-                            <FormItem>
+                            <FormItem className="flex flex-col">
                                 <FormLabel>{t("Tax (Act) Expiry Date")}</FormLabel>
-                                <FormControl>
-                                    <Input type="date" {...field} />
-                                </FormControl>
+                                <DatePicker
+                                    value={field.value ? new Date(field.value) : undefined}
+                                    onChange={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
+                                    fromYear={new Date().getFullYear() - 10}
+                                    toYear={new Date().getFullYear() + 10}
+                                />
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -43,11 +49,14 @@ export function RegistrationSection() {
                         control={control}
                         name="registrationDate"
                         render={({ field }) => (
-                            <FormItem>
+                            <FormItem className="flex flex-col">
                                 <FormLabel>{t("registration Date")}</FormLabel>
-                                <FormControl>
-                                    <Input type="date" {...field} />
-                                </FormControl>
+                                <DatePicker
+                                    value={field.value ? new Date(field.value) : undefined}
+                                    onChange={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
+                                    fromYear={1990}
+                                    toYear={new Date().getFullYear()}
+                                />
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -56,11 +65,14 @@ export function RegistrationSection() {
                         control={control}
                         name="buyingDate"
                         render={({ field }) => (
-                            <FormItem>
+                            <FormItem className="flex flex-col">
                                 <FormLabel>{t("buying Date")}</FormLabel>
-                                <FormControl>
-                                    <Input type="date" {...field} />
-                                </FormControl>
+                                <DatePicker
+                                    value={field.value ? new Date(field.value) : undefined}
+                                    onChange={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
+                                    fromYear={1990}
+                                    toYear={new Date().getFullYear()}
+                                />
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -100,8 +112,8 @@ export function RegistrationSection() {
                         </FormItem>
                     )}
                 />
-            </CardContent>
-        </Card>
+            </CardContent >
+        </Card >
     );
 }
 

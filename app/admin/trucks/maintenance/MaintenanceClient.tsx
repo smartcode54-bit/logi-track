@@ -17,6 +17,8 @@ import { ArrowLeft, Upload, FileText, Wrench, Save, Loader2, CheckCircle2, Histo
 import { Badge } from "@/components/ui/badge";
 import { formatLicensePlate } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DatePicker } from "@/components/ui/date-picker";
+import { format } from "date-fns";
 
 const SERVICE_TYPES_PM = [
     { value: "oil_change", label: "Oil Change" },
@@ -288,12 +290,22 @@ export default function MaintenanceClient() {
                                     </div>
                                     <div className="space-y-2">
                                         <Label>{t("Start Date")}</Label>
-                                        <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                                        <DatePicker
+                                            value={startDate ? new Date(startDate) : undefined}
+                                            onChange={(date) => setStartDate(date ? format(date, "yyyy-MM-dd") : "")}
+                                            fromYear={new Date().getFullYear() - 1}
+                                            toYear={new Date().getFullYear() + 1}
+                                        />
                                     </div>
                                     {status === "completed" && (
                                         <div className="space-y-2">
                                             <Label>{t("End Date")}</Label>
-                                            <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                                            <DatePicker
+                                                value={endDate ? new Date(endDate) : undefined}
+                                                onChange={(date) => setEndDate(date ? format(date, "yyyy-MM-dd") : "")}
+                                                fromYear={new Date().getFullYear() - 1}
+                                                toYear={new Date().getFullYear() + 1}
+                                            />
                                         </div>
                                     )}
                                 </div>

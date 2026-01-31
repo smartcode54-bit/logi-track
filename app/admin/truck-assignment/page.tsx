@@ -16,13 +16,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue
-} from "@/components/ui/select";
+
+import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -46,6 +41,7 @@ import {
     getAvailableDrivers,
     getAvailableTrucks,
     createAssignment,
+    terminateAssignment,
     getRecentHistory,
     type AssignmentData,
     type DriverOption,
@@ -96,7 +92,9 @@ export default function TruckAssignmentPage() {
             const assignedTruckIds = new Set(fetchedAssignments.map(a => a.truckId));
 
             const availableDrivers = fetchedDrivers.filter(d => !assignedDriverIds.has(d.id));
-            const availableTrucks = fetchedTrucks.filter(t => !assignedTruckIds.has(t.id));
+            // Do NOT filter out assigned trucks. Trucks can have multiple assignments now.
+            // We might want to filter out 'maintenance' trucks, but that's handled in getAvailableTrucks.
+            const availableTrucks = fetchedTrucks;
 
             setDrivers(availableDrivers);
             setTrucks(availableTrucks);
@@ -154,6 +152,19 @@ export default function TruckAssignmentPage() {
             toast.error("Failed to deploy assignment");
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleRevoke = async (assignmentId: string, truckId: string, driverId: string) => {
+        if (!confirm("Are you sure you want to revoke this assignment/return the vehicle?")) return;
+
+        try {
+            await terminateAssignment(assignmentId, truckId, driverId);
+            toast.success("Assignment revoked successfully");
+            fetchData();
+        } catch (error) {
+            console.error("Revocation failed", error);
+            toast.error("Failed to revoke assignment");
         }
     };
 
@@ -251,18 +262,19 @@ export default function TruckAssignmentPage() {
                         {/* Driver Select */}
                         <div className="flex-1 space-y-4">
                             <label className="text-sm font-medium text-foreground">1. Select Available Driver</label>
-                            <Select value={selectedDriver} onValueChange={setSelectedDriver}>
-                                <SelectTrigger className="h-12 bg-background/50 border-border/50 text-base">
-                                    <SelectValue placeholder="Search by name or license..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {drivers.map(driver => (
-                                        <SelectItem key={driver.id} value={driver.id}>
-                                            {driver.name} {driver.licenseNumber ? `(${driver.licenseNumber})` : ''}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+
+                            <Combobox
+                                options={drivers.map(d => ({
+                                    value: d.id,
+                                    label: `${d.name} ${d.licenseNumber ? `(${d.licenseNumber})` : ''}`
+                                }))}
+                                value={selectedDriver}
+                                onSelect={setSelectedDriver}
+                                placeholder="Search driver..."
+                                searchPlaceholder="Search by name..."
+                                emptyText="No available drivers found."
+                                className="h-12 text-base bg-background/50 border-border/50"
+                            />
 
                             <div className="h-24 rounded-lg border border-dashed border-border/60 flex items-center gap-4 px-4 bg-muted/20">
                                 <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
@@ -284,18 +296,19 @@ export default function TruckAssignmentPage() {
                         {/* Truck Select */}
                         <div className="flex-1 space-y-4">
                             <label className="text-sm font-medium text-foreground">2. Select Available Truck</label>
-                            <Select value={selectedTruck} onValueChange={setSelectedTruck}>
-                                <SelectTrigger className="h-12 bg-background/50 border-border/50 text-base">
-                                    <SelectValue placeholder="Search by ID or plate..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {trucks.map(truck => (
-                                        <SelectItem key={truck.id} value={truck.id}>
-                                            {truck.model} ({truck.plate})
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+
+                            <Combobox
+                                options={trucks.map(t => ({
+                                    value: t.id,
+                                    label: `${t.model} (${t.plate})`
+                                }))}
+                                value={selectedTruck}
+                                onSelect={setSelectedTruck}
+                                placeholder="Search truck..."
+                                searchPlaceholder="Search by plate or model..."
+                                emptyText="No available trucks found."
+                                className="h-12 text-base bg-background/50 border-border/50"
+                            />
 
                             <div className="h-24 rounded-lg border border-dashed border-border/60 flex items-center gap-4 px-4 bg-muted/20">
                                 <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
@@ -390,7 +403,7 @@ export default function TruckAssignmentPage() {
                                             </Badge>
                                         ) : (
                                             <Badge variant="secondary" className="bg-muted text-muted-foreground uppercase text-[10px] tracking-wider px-2 py-0.5">
-                                                Completed
+                                                Revoked
                                             </Badge>
                                         )}
                                     </TableCell>
@@ -403,7 +416,14 @@ export default function TruckAssignmentPage() {
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuItem>View Details</DropdownMenuItem>
-                                                <DropdownMenuItem className="text-destructive focus:text-destructive">Revoke Assignment</DropdownMenuItem>
+                                                {item.status === 'active' && (
+                                                    <DropdownMenuItem
+                                                        className="text-destructive focus:text-destructive cursor-pointer"
+                                                        onClick={() => handleRevoke(item.id, item.truckId, item.driverId)}
+                                                    >
+                                                        Revoke Assignment
+                                                    </DropdownMenuItem>
+                                                )}
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </TableCell>

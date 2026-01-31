@@ -6,6 +6,8 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
+import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useFormContext } from "react-hook-form";
 import { useLanguage } from "@/context/language";
@@ -29,11 +31,14 @@ export function MaintenanceSection() {
                         control={control}
                         name="lastServiceDate"
                         render={({ field }) => (
-                            <FormItem>
+                            <FormItem className="flex flex-col">
                                 <FormLabel>{t("Last Service Date")}</FormLabel>
-                                <FormControl>
-                                    <Input type="date" {...field} />
-                                </FormControl>
+                                <DatePicker
+                                    value={field.value ? new Date(field.value) : undefined}
+                                    onChange={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
+                                    fromYear={new Date().getFullYear() - 5}
+                                    toYear={new Date().getFullYear()}
+                                />
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -42,11 +47,14 @@ export function MaintenanceSection() {
                         control={control}
                         name="nextServiceDate"
                         render={({ field }) => (
-                            <FormItem>
+                            <FormItem className="flex flex-col">
                                 <FormLabel>{t("Next Service Date")}</FormLabel>
-                                <FormControl>
-                                    <Input type="date" {...field} />
-                                </FormControl>
+                                <DatePicker
+                                    value={field.value ? new Date(field.value) : undefined}
+                                    onChange={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
+                                    fromDate={new Date()}
+                                    toYear={new Date().getFullYear() + 5}
+                                />
                                 <FormMessage />
                             </FormItem>
                         )}

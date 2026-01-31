@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import Image from "next/image";
 import { getTruckByIdClient, TruckData } from "../actions.client";
+import { getTruckAssignmentHistory, AssignmentData } from "../../truck-assignment/actions.client";
 import { FileViewer } from "@/components/ui/file-viewer";
 import { getSubcontractors } from "../../subcontractors/actions.client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -26,6 +27,7 @@ export default function TruckPreviewClient() {
     const { setCustomLastItem } = useBreadcrumb();
 
     const [truck, setTruck] = useState<TruckData | null>(null);
+    const [assignmentHistory, setAssignmentHistory] = useState<AssignmentData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -50,6 +52,10 @@ export default function TruckPreviewClient() {
                 }
                 setTruck(data);
                 setCustomLastItem(`Truck ${data.licensePlate}`);
+
+                // Fetch history
+                const history = await getTruckAssignmentHistory(truckId);
+                setAssignmentHistory(history);
             } catch (err) {
                 console.error("Error fetching truck:", err);
                 setError(err instanceof Error ? err.message : "Failed to load truck data.");
@@ -378,55 +384,110 @@ export default function TruckPreviewClient() {
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="pt-6">
-                            {/* Placeholder Logic for Assignment */}
-                            {false ? (
-                                <div className="flex flex-col items-center text-center">
-                                    <div className="relative mb-3">
-                                        <Avatar className="h-20 w-20 border-4 border-background shadow-sm">
-                                            <AvatarImage src="/placeholder-avatar.jpg" />
-                                            <AvatarFallback className="bg-muted text-muted-foreground">
-                                                <User className="h-8 w-8" />
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <span className="absolute bottom-1 right-1 h-4 w-4 rounded-full bg-green-500 border-2 border-background"></span>
-                                    </div>
-                                    <h3 className="text-lg font-bold">Johnathan Doe</h3>
-                                    <p className="text-xs text-muted-foreground font-medium mb-4">Class A CDL • 8 Years Exp.</p>
+                            {(() => {
+                                const uniqueAssignments = truck.currentAssignments
+                                    ? Array.from(new Map(truck.currentAssignments.map(item => [item.driverId, item])).values())
+                                    : [];
 
-                                    <div className="grid grid-cols-2 gap-4 w-full mb-6">
-                                        <div className="bg-muted/50 rounded p-2 text-center">
-                                            <p className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider mb-0.5">License</p>
-                                            <p className="text-xs font-semibold">#NY-882199</p>
-                                        </div>
-                                        <div className="bg-muted/50 rounded p-2 text-center">
-                                            <p className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider mb-0.5">Status</p>
-                                            <p className="text-xs font-semibold">On Duty</p>
-                                        </div>
-                                    </div>
+                                return uniqueAssignments.length > 0 ? (
+                                    <div className="space-y-4">
+                                        {uniqueAssignments.map((assignment, index) => (
+                                            <div key={assignment.assignmentId} className="flex flex-col items-center text-center border-b last:border-0 pb-4 last:pb-0">
+                                                {/* Show Avatar only for the first one or smaller for list? Let's keep big for now if few, or adjust.
+                                                If multiple, maybe a more compact list view is better. 
+                                                Let's do a compact list if > 1, else keep the big card view for single. 
+                                            */}
 
-                                    <div className="grid grid-cols-2 gap-3 w-full">
-                                        <Button variant="outline" className="w-full text-xs h-9">
-                                            <Phone className="h-3.5 w-3.5 mr-2" />
-                                            Call
-                                        </Button>
-                                        <Button className="w-full text-xs h-9 bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-100 shadow-none">
-                                            Profile
+                                                {// If only 1 driver, show the big detailed view
+                                                    uniqueAssignments.length === 1 ? (
+                                                        <>
+                                                            <div className="relative mb-3">
+                                                                <Avatar className="h-20 w-20 border-4 border-background shadow-sm">
+                                                                    <AvatarFallback className="bg-blue-100 text-blue-600 font-bold text-xl">
+                                                                        {(assignment.driverName || 'DR').substring(0, 2).toUpperCase()}
+                                                                    </AvatarFallback>
+                                                                </Avatar>
+                                                                <span className="absolute bottom-1 right-1 h-4 w-4 rounded-full bg-green-500 border-2 border-background"></span>
+                                                            </div>
+                                                            <h3 className="text-lg font-bold">{assignment.driverName}</h3>
+                                                            <p className="text-xs text-muted-foreground font-medium mb-4">
+                                                                Assigned since {assignment.assignedAt ? new Date(assignment.assignedAt).toLocaleDateString() : '-'}
+                                                            </p>
+
+                                                            <div className="grid grid-cols-2 gap-4 w-full mb-6">
+                                                                <div className="bg-muted/50 rounded p-2 text-center">
+                                                                    <p className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider mb-0.5">Status</p>
+                                                                    <p className="text-xs font-semibold text-green-600">On Duty</p>
+                                                                </div>
+                                                                <div className="bg-muted/50 rounded p-2 text-center">
+                                                                    <p className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider mb-0.5">Action</p>
+                                                                    <p className="text-xs font-semibold">Active</p>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="grid grid-cols-2 gap-3 w-full">
+                                                                <Button variant="outline" className="w-full text-xs h-9" asChild>
+                                                                    <Link href={`/admin/drivers/view?id=${assignment.driverId}`}>
+                                                                        View Profile
+                                                                    </Link>
+                                                                </Button>
+                                                                <Button className="w-full text-xs h-9 bg-red-50 text-red-600 hover:bg-red-100 border-red-100 shadow-none" asChild>
+                                                                    <Link href="/admin/truck-assignment">
+                                                                        Manage
+                                                                    </Link>
+                                                                </Button>
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        // Multiple Drivers View - Compact
+                                                        <div className="w-full flex items-center justify-between p-2 rounded-lg bg-muted/30">
+                                                            <div className="flex items-center gap-3">
+                                                                <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
+                                                                    <AvatarFallback className="bg-blue-100 text-blue-600 font-bold text-sm">
+                                                                        {(assignment.driverName || 'DR').substring(0, 2).toUpperCase()}
+                                                                    </AvatarFallback>
+                                                                </Avatar>
+                                                                <div className="text-left">
+                                                                    <p className="font-semibold text-sm">{assignment.driverName}</p>
+                                                                    <p className="text-[10px] text-muted-foreground">Original: {assignment.assignedAt ? new Date(assignment.assignedAt).toLocaleDateString() : '-'}</p>
+                                                                </div>
+                                                            </div>
+                                                            <Button variant="ghost" size="sm" asChild className="h-8 w-8 p-0">
+                                                                <Link href={`/admin/drivers/view?id=${assignment.driverId}`}>
+                                                                    <User className="h-4 w-4 text-muted-foreground" />
+                                                                </Link>
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                            </div>
+                                        ))}
+
+                                        {uniqueAssignments.length > 1 && (
+                                            <div className="pt-2">
+                                                <Button className="w-full text-xs h-9 bg-blue-600 hover:bg-blue-700 text-white" asChild>
+                                                    <Link href="/admin/truck-assignment">
+                                                        Manage Assignments
+                                                    </Link>
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center text-center">
+                                        <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                                            <User className="h-6 w-6 text-muted-foreground" />
+                                        </div>
+                                        <p className="text-sm font-medium mb-1">No Driver Assigned</p>
+                                        <p className="text-xs text-muted-foreground mb-4">Assign a driver to this truck to track performance.</p>
+                                        <Button className="w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white" asChild>
+                                            <Link href="/admin/truck-assignment">
+                                                <Plus className="h-4 w-4" />
+                                                Assign Driver
+                                            </Link>
                                         </Button>
                                     </div>
-                                </div>
-                            ) : (
-                                <div className="flex flex-col items-center justify-center text-center">
-                                    <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
-                                        <User className="h-6 w-6 text-muted-foreground" />
-                                    </div>
-                                    <p className="text-sm font-medium mb-1">No Driver Assigned</p>
-                                    <p className="text-xs text-muted-foreground mb-4">Assign a driver to this truck to track performance.</p>
-                                    <Button className="w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white">
-                                        <Plus className="h-4 w-4" />
-                                        Assign Driver
-                                    </Button>
-                                </div>
-                            )}
+                                );
+                            })()}
                         </CardContent>
                     </Card>
 

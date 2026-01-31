@@ -73,7 +73,7 @@ export default function RootLayout({
         <AuthProvider>
           <LanguageProvider>
             {children}
-            <Toaster />
+            <Toaster duration={5000} closeButton richColors />
           </LanguageProvider>
         </AuthProvider>
       </body>

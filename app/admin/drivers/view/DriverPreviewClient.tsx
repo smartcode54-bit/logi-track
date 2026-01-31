@@ -14,9 +14,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import Image from "next/image";
 import { getDriverByIdClient } from "../actions.client";
+import { getDriverAssignmentHistory, AssignmentData } from "../../truck-assignment/actions.client";
 import { Driver } from "@/validate/driverSchema";
 import { FileViewer } from "@/components/ui/file-viewer";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
 import { useBreadcrumb } from "@/context/breadcrumb";
 import { format } from "date-fns";
 import { getSubcontractors } from "../../subcontractors/actions.client";
@@ -34,6 +43,7 @@ export default function DriverPreviewClient() {
     const [isViewerOpen, setIsViewerOpen] = useState(false);
     const [viewerIndex, setViewerIndex] = useState(0);
     const [subcontractors, setSubcontractors] = useState<any[]>([]);
+    const [assignmentHistory, setAssignmentHistory] = useState<AssignmentData[]>([]);
 
     useEffect(() => {
         const fetchDriver = async () => {
@@ -52,6 +62,9 @@ export default function DriverPreviewClient() {
                 }
                 setDriver(data);
                 setCustomLastItem(`${data.firstName} ${data.lastName}`);
+
+                // Fetch Assignment History
+                getDriverAssignmentHistory(driverId).then(setAssignmentHistory);
             } catch (err) {
                 console.error("Error fetching driver:", err);
                 setError(err instanceof Error ? err.message : "Failed to load driver data.");
@@ -163,7 +176,7 @@ export default function DriverPreviewClient() {
                                 Registered: {formatDate(driver.createdAt)}
                             </span>
                             <span>•</span>
-                            <span>ID: {driver.id.substring(0, 8).toUpperCase()}</span>
+                            <span>ID: {driver.id?.substring(0, 8).toUpperCase() ?? "-"}</span>
                         </div>
                     </div>
                 </div>
@@ -248,6 +261,10 @@ export default function DriverPreviewClient() {
                                 <div className="flex justify-between py-2 border-b">
                                     <span className="text-sm text-muted-foreground">Truck License ID</span>
                                     <span className="text-sm font-medium font-mono">{driver.truckLicenseId}</span>
+                                </div>
+                                <div className="flex justify-between py-2 border-b">
+                                    <span className="text-sm text-muted-foreground">License Type</span>
+                                    <span className="text-sm font-medium">{driver.licenseType || "-"}</span>
                                 </div>
                             </div>
                         </CardContent>
@@ -357,24 +374,63 @@ export default function DriverPreviewClient() {
 
                     {/* Current Assignment */}
                     <Card>
-                        <CardHeader className="pb-3 border-b">
-                            <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                                <Truck className="h-5 w-5 text-blue-600" />
-                                Current Assignment
+                        <CardHeader className="flex flex-row items-center justify-between py-6">
+                            <CardTitle className="text-lg font-bold flex items-center gap-2">
+                                <Truck className="h-5 w-5" />
+                                Truck Assignment
                             </CardTitle>
-                        </CardHeader>
-                        <CardContent className="pt-6">
-                            <div className="flex flex-col items-center justify-center text-center py-4">
-                                <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
-                                    <Truck className="h-6 w-6 text-muted-foreground" />
-                                </div>
-                                <p className="text-sm font-medium mb-1">No Truck Assigned</p>
-                                <p className="text-xs text-muted-foreground mb-4">This driver is currently not assigned to any truck.</p>
-                                <Button className="w-full gap-2" variant="secondary">
-                                    <Plus className="h-4 w-4" />
-                                    Assign Truck
+                            {!driver.currentAssignment && (
+                                <Button size="sm" className="h-8 gap-2" variant="outline" asChild>
+                                    <Link href="/admin/truck-assignment">
+                                        <Plus className="h-3.5 w-3.5" />
+                                        Assign
+                                    </Link>
                                 </Button>
-                            </div>
+                            )}
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[120px] text-xs">Truck</TableHead>
+                                        <TableHead className="text-xs">Start</TableHead>
+                                        <TableHead className="text-xs">End</TableHead>
+                                        <TableHead className="text-right text-xs">Status</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {assignmentHistory.length > 0 ? (
+                                        assignmentHistory.map((history) => (
+                                            <TableRow key={history.id}>
+                                                <TableCell>
+                                                    <div className="font-medium text-xs">{history.truckPlate}</div>
+                                                    <div className="text-[10px] text-muted-foreground">{history.truckModel}</div>
+                                                </TableCell>
+                                                <TableCell className="text-xs text-muted-foreground">
+                                                    {format(history.createdAt, "dd MMM yy")}
+                                                </TableCell>
+                                                <TableCell className="text-xs text-muted-foreground">
+                                                    {history.revokedAt ? format(history.revokedAt, "dd MMM yy") : "-"}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className={`text-[10px] px-1.5 h-5 ${!history.revokedAt ? 'bg-green-100 text-green-600 hover:bg-green-100' : 'bg-gray-100 text-gray-500 hover:bg-gray-100'}`}
+                                                    >
+                                                        {!history.revokedAt ? 'Current' : 'Revoked'}
+                                                    </Badge>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={4} className="h-24 text-center text-xs text-muted-foreground">
+                                                No assignment history found.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
                         </CardContent>
                     </Card>
                 </div>

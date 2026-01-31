@@ -124,6 +124,20 @@ export default function TrucksListPage() {
                     // Renewal Status Mappings
                     taxRenewalStatus: data.taxRenewalStatus,
                     insuranceRenewalStatus: data.insuranceRenewalStatus,
+
+                    // Assignment - Denormalized
+                    currentAssignments: data.currentAssignments ? (data.currentAssignments as any[]).map(assignment => ({
+                        driverId: assignment.driverId,
+                        driverName: assignment.driverName,
+                        assignedAt: formatTimestamp(assignment.assignedAt) as Date,
+                        assignmentId: assignment.assignmentId
+                    })) : (data.currentAssignment ? [{
+                        // Fallback for legacy single assignment data
+                        driverId: data.currentAssignment.driverId,
+                        driverName: data.currentAssignment.driverName,
+                        assignedAt: formatTimestamp(data.currentAssignment.assignedAt) as Date,
+                        assignmentId: data.currentAssignment.assignmentId
+                    }] : []),
                 });
             });
             setTrucks(trucksData);
@@ -340,6 +354,7 @@ export default function TrucksListPage() {
                             <TableHead className="w-[100px] text-xs font-semibold tracking-wider text-muted-foreground uppercase">ID</TableHead>
                             <TableHead className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Plate Number</TableHead>
                             <TableHead className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Model</TableHead>
+                            <TableHead className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Current Driver</TableHead>
                             <TableHead className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Ownership</TableHead>
                             <TableHead className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Tax/Insu.</TableHead>
                             <TableHead className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">PM Status</TableHead>
@@ -377,6 +392,22 @@ export default function TrucksListPage() {
                                             <span className="text-sm font-medium">{truck.model}</span>
                                             <span className="text-xs text-muted-foreground">{truck.brand}</span>
                                         </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        {truck.currentAssignments && truck.currentAssignments.length > 0 ? (
+                                            <div className="flex flex-col gap-1">
+                                                {Array.from(new Map(truck.currentAssignments.map(item => [item.driverId, item])).values()).map((assignment, idx) => (
+                                                    <div key={idx} className="flex items-center gap-2">
+                                                        <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-[10px] font-bold text-blue-600">
+                                                            {(assignment.driverName || 'DR').substring(0, 2).toUpperCase()}
+                                                        </div>
+                                                        <span className="text-sm font-medium">{assignment.driverName}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <span className="text-muted-foreground text-xs">-</span>
+                                        )}
                                     </TableCell>
                                     <TableCell>
                                         {getOwnershipBadge(truck.ownershipType)}

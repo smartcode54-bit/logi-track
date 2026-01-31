@@ -20,7 +20,7 @@ export const COLLECTIONS = {
     SUBCONTRACTORS: "subcontractors",
 
     /** Driver-to-truck assignments */
-    ASSIGNMENTS: "assignments",
+    ASSIGNMENTS: "truckAssignment",
 
     /** Drivers personnel */
     DRIVERS: "drivers",

@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
+import { format } from "date-fns";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Upload, FileText, Shield, Save, Loader2, CheckCircle2, Clock } from "lucide-react";
@@ -375,10 +377,12 @@ function RenewalForm({ type, truck, onSuccess }: { type: "tax" | "insurance", tr
 
                             <div className="space-y-2">
                                 <Label>Due Date / New Expiry Date</Label>
-                                <Input
-                                    type="date"
-                                    value={expiryDate}
-                                    onChange={(e) => setExpiryDate(e.target.value)}
+                                <Label>Due Date / New Expiry Date</Label>
+                                <DatePicker
+                                    value={expiryDate ? new Date(expiryDate) : undefined}
+                                    onChange={(date) => setExpiryDate(date ? format(date, "yyyy-MM-dd") : "")}
+                                    fromYear={new Date().getFullYear()}
+                                    toYear={new Date().getFullYear() + 10}
                                 />
                             </div>
                         </div>
@@ -476,18 +480,22 @@ function RenewalForm({ type, truck, onSuccess }: { type: "tax" | "insurance", tr
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <Label>Start Date</Label>
-                                    <Input
-                                        type="date"
-                                        value={startDate}
-                                        onChange={(e) => setStartDate(e.target.value)}
+                                    <Label>Start Date</Label>
+                                    <DatePicker
+                                        value={startDate ? new Date(startDate) : undefined}
+                                        onChange={(date) => setStartDate(date ? format(date, "yyyy-MM-dd") : "")}
+                                        fromYear={new Date().getFullYear() - 5}
+                                        toYear={new Date().getFullYear() + 5}
                                     />
                                 </div>
                                 <div className="space-y-2">
                                     <Label>End Date</Label>
-                                    <Input
-                                        type="date"
-                                        value={expiryDate}
-                                        onChange={(e) => setExpiryDate(e.target.value)}
+                                    <Label>End Date</Label>
+                                    <DatePicker
+                                        value={expiryDate ? new Date(expiryDate) : undefined}
+                                        onChange={(date) => setExpiryDate(date ? format(date, "yyyy-MM-dd") : "")}
+                                        fromYear={new Date().getFullYear()}
+                                        toYear={new Date().getFullYear() + 10}
                                     />
                                 </div>
                             </div>
