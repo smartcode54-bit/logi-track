@@ -20,6 +20,8 @@ import {
     ChevronRight,
     FileText,
     ShieldAlert,
+    ChevronDown,
+    Users,
 } from "lucide-react";
 import {
     DropdownMenu,
@@ -394,20 +396,48 @@ export default function TrucksListPage() {
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        {truck.currentAssignments && truck.currentAssignments.length > 0 ? (
-                                            <div className="flex flex-col gap-1">
-                                                {Array.from(new Map(truck.currentAssignments.map(item => [item.driverId, item])).values()).map((assignment, idx) => (
-                                                    <div key={idx} className="flex items-center gap-2">
+                                        {(() => {
+                                            if (!truck.currentAssignments || truck.currentAssignments.length === 0) {
+                                                return <span className="text-muted-foreground text-xs">-</span>;
+                                            }
+
+                                            const assignments = Array.from(new Map(truck.currentAssignments.map(item => [item.driverId, item])).values());
+
+                                            if (assignments.length === 1) {
+                                                const assignment = assignments[0];
+                                                return (
+                                                    <div className="flex items-center gap-2">
                                                         <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-[10px] font-bold text-blue-600">
                                                             {(assignment.driverName || 'DR').substring(0, 2).toUpperCase()}
                                                         </div>
                                                         <span className="text-sm font-medium">{assignment.driverName}</span>
                                                     </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <span className="text-muted-foreground text-xs">-</span>
-                                        )}
+                                                );
+                                            }
+
+                                            return (
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80 gap-1.5 py-1 px-2 h-auto w-fit transition-colors">
+                                                            <Users className="h-3 w-3" />
+                                                            {assignments.length} Drivers
+                                                            <ChevronDown className="h-3 w-3 opacity-50" />
+                                                        </Badge>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="start" className="w-[200px]">
+                                                        <DropdownMenuLabel>Assigned Drivers</DropdownMenuLabel>
+                                                        {assignments.map((assignment, idx) => (
+                                                            <div key={idx} className="flex items-center gap-2 px-2 py-1.5 text-sm">
+                                                                <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-[10px] font-bold text-blue-600 shrink-0">
+                                                                    {(assignment.driverName || 'DR').substring(0, 2).toUpperCase()}
+                                                                </div>
+                                                                <span className="truncate font-medium">{assignment.driverName}</span>
+                                                            </div>
+                                                        ))}
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            );
+                                        })()}
                                     </TableCell>
                                     <TableCell>
                                         {getOwnershipBadge(truck.ownershipType)}

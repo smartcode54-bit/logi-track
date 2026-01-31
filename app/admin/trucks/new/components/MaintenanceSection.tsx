@@ -88,7 +88,7 @@ export function MaintenanceSection() {
                             <FormItem>
                                 <FormLabel>{t("Responsible Person (Service)")}</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="e.g. Driver Name" {...field} />
+                                    <Input placeholder="e.g. Driver Name" {...field} value={field.value ?? ""} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>

@@ -43,6 +43,7 @@ export const maintenanceSchema = z.object({
     totalCost: optionalNumber(0, 2000000, "Total Cost"), // Calculated or explicit
 
     provider: z.string().optional(), // Garage name
+    paymentMethod: z.enum(["cash", "credit_card", "billing", "transfer", "insurance_claim"]).optional(),
 
     currentMileage: optionalNumber(0, 2000000, "Current Mileage"),
     nextServiceMileage: optionalNumber(0, 2000000, "Next Service Mileage"), // For PM
@@ -69,10 +70,9 @@ export const maintenanceDefaultValues: MaintenanceFormValues = {
     startDate: new Date().toISOString().split('T')[0], // Today
     endDate: "",
     status: "in_progress",
-    costLabor: undefined,
-    costParts: undefined,
     totalCost: undefined,
     provider: "",
+    paymentMethod: "cash",
     currentMileage: undefined,
     nextServiceMileage: undefined,
     images: [],

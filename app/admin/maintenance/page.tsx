@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { MaintenanceDashboardData, getMaintenanceOverview } from "./actions.client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +25,7 @@ export default function MaintenanceDashboardPage() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [typeFilter, setTypeFilter] = useState<"all" | "PM" | "CM">("all");
+    const router = useRouter();
 
     useEffect(() => {
         async function loadData() {
@@ -177,7 +179,11 @@ export default function MaintenanceDashboardPage() {
                         </TableHeader>
                         <TableBody>
                             {filteredRecords.map((record) => (
-                                <TableRow key={record.id}>
+                                <TableRow
+                                    key={record.id}
+                                    className="cursor-pointer hover:bg-muted/50"
+                                    onClick={() => router.push(`/admin/trucks/maintenance?id=${record.truckId}`)}
+                                >
                                     <TableCell className="whitespace-nowrap font-mono text-xs">
                                         {format(new Date(record.startDate), "dd MMM yyyy")}
                                     </TableCell>
@@ -220,8 +226,9 @@ export default function MaintenanceDashboardPage() {
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                 <DropdownMenuItem asChild>
-                                                    <Link href={`/admin/trucks/maintenance?id=${record.truckId}`}>
-                                                        View Details
+                                                    <Link href={`/admin/trucks/maintenance?id=${record.truckId}`} className="flex items-center cursor-pointer">
+                                                        <Wrench className="mr-2 h-4 w-4" />
+                                                        Manage / Update
                                                     </Link>
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>

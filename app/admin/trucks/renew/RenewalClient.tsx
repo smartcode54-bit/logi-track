@@ -377,7 +377,6 @@ function RenewalForm({ type, truck, onSuccess }: { type: "tax" | "insurance", tr
 
                             <div className="space-y-2">
                                 <Label>Due Date / New Expiry Date</Label>
-                                <Label>Due Date / New Expiry Date</Label>
                                 <DatePicker
                                     value={expiryDate ? new Date(expiryDate) : undefined}
                                     onChange={(date) => setExpiryDate(date ? format(date, "yyyy-MM-dd") : "")}
@@ -480,7 +479,6 @@ function RenewalForm({ type, truck, onSuccess }: { type: "tax" | "insurance", tr
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <Label>Start Date</Label>
-                                    <Label>Start Date</Label>
                                     <DatePicker
                                         value={startDate ? new Date(startDate) : undefined}
                                         onChange={(date) => setStartDate(date ? format(date, "yyyy-MM-dd") : "")}
@@ -489,7 +487,6 @@ function RenewalForm({ type, truck, onSuccess }: { type: "tax" | "insurance", tr
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>End Date</Label>
                                     <Label>End Date</Label>
                                     <DatePicker
                                         value={expiryDate ? new Date(expiryDate) : undefined}

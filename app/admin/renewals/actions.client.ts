@@ -6,8 +6,8 @@ import { COLLECTIONS } from "@/lib/collections";
 import { TruckData } from "../trucks/actions.client";
 
 export interface RenewalTruckData extends TruckData {
-    taxStatus: "ok" | "expiring_soon" | "overdue";
-    insuranceStatus: "ok" | "expiring_soon" | "overdue";
+    taxStatus: "ok" | "expiring_soon" | "overdue" | "in_progress";
+    insuranceStatus: "ok" | "expiring_soon" | "overdue" | "in_progress";
 }
 
 /**
@@ -41,11 +41,22 @@ export const getRenewalOverview = async (): Promise<RenewalTruckData[]> => {
 
         const trucks = snapshot.docs.map(doc => {
             const data = doc.data() as TruckData;
+
+            let taxStatus: RenewalTruckData["taxStatus"] = getStatus(data.taxExpiryDate);
+            if (data.taxRenewalStatus === 'in_progress') {
+                taxStatus = 'in_progress';
+            }
+
+            let insuranceStatus: RenewalTruckData["insuranceStatus"] = getStatus(data.insuranceExpiryDate);
+            if (data.insuranceRenewalStatus === 'in_progress') {
+                insuranceStatus = 'in_progress';
+            }
+
             return {
                 ...data,
                 id: doc.id,
-                taxStatus: getStatus(data.taxExpiryDate),
-                insuranceStatus: getStatus(data.insuranceExpiryDate)
+                taxStatus,
+                insuranceStatus
             } as RenewalTruckData;
         });
 

@@ -41,6 +41,26 @@ export const saveMaintenanceRecord = async (
             });
         }
 
+        // If status is completed, update truck status to 'active' and update service info
+        if (data.status === 'completed') {
+            const truckRef = doc(db, COLLECTIONS.TRUCKS, data.truckId);
+            const truckUpdate: any = {
+                truckStatus: 'active',
+                updatedBy: userId,
+                updatedAt: serverTimestamp(),
+            };
+
+            if (data.endDate) truckUpdate.lastServiceDate = data.endDate;
+            if (data.currentMileage) truckUpdate.currentMileage = data.currentMileage;
+
+            // Critical: Only update next service mileage for PM
+            if (data.type === 'PM' && data.nextServiceMileage) {
+                truckUpdate.nextServiceMileage = data.nextServiceMileage;
+            }
+
+            await updateDoc(truckRef, truckUpdate);
+        }
+
         return { success: true, id: docRef.id };
     } catch (error) {
         console.error("Error saving maintenance record:", error);
@@ -80,7 +100,7 @@ export const updateMaintenanceRecord = async (
                 truckUpdate.currentMileage = data.currentMileage;
             }
             // For PM, update next service mileage
-            if (data.nextServiceMileage) {
+            if (data.type === 'PM' && data.nextServiceMileage) {
                 truckUpdate.nextServiceMileage = data.nextServiceMileage;
             }
 

@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useLanguage } from "@/context/language";
 import { getTruckByIdClient, TruckData } from "../actions.client";
 import { uploadTruckFile } from "../new/action.client";
-import { saveMaintenanceRecord, getMaintenanceHistory } from "./actions.client";
+import { saveMaintenanceRecord, getMaintenanceHistory, updateMaintenanceRecord } from "./actions.client";
 import { MaintenanceData, maintenanceSchema } from "@/validate/maintenanceSchema";
 import { useAuth } from "@/context/auth";
 import { Button } from "@/components/ui/button";
@@ -13,12 +13,19 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Upload, FileText, Wrench, Save, Loader2, CheckCircle2, History, Plus, AlertTriangle, Clock } from "lucide-react";
+import { ArrowLeft, Upload, FileText, Wrench, Save, Loader2, CheckCircle2, History, Plus, AlertTriangle, Clock, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatLicensePlate } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DatePicker } from "@/components/ui/date-picker";
 import { format } from "date-fns";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const SERVICE_TYPES_PM = [
     { value: "oil_change", label: "Oil Change" },
@@ -41,14 +48,20 @@ export default function MaintenanceClient() {
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState<"list" | "form">("list");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
+
+    // Derived Stats
+    const totalPMCost = history.filter(h => h.type === 'PM').reduce((sum, h) => sum + (h.totalCost || 0), 0);
+    const totalCMCost = history.filter(h => h.type === 'CM').reduce((sum, h) => sum + (h.totalCost || 0), 0);
 
     // Form State
     const [type, setType] = useState<"PM" | "CM">("PM");
-    const [status, setStatus] = useState<"in_progress" | "completed">("in_progress");
+    const [status, setStatus] = useState<"in_progress" | "completed" | "cancelled">("in_progress");
     const [serviceType, setServiceType] = useState<string>("");
     const [customServiceType, setCustomServiceType] = useState<string>(""); // For CM
     const [startDate, setStartDate] = useState<string>("");
     const [endDate, setEndDate] = useState<string>("");
+    const [paymentMethod, setPaymentMethod] = useState<string>("cash");
 
     // Costs
     const [costLabor, setCostLabor] = useState<string>("");
@@ -121,6 +134,8 @@ export default function MaintenanceClient() {
                 provider,
                 currentMileage: parseFloat(currentMileage) || undefined,
                 nextServiceMileage: parseFloat(nextServiceMileage) || undefined,
+                nextServiceMileage: parseFloat(nextServiceMileage) || undefined,
+                paymentMethod,
                 images: imageUrl ? [imageUrl] : [],
                 notes
             };
@@ -133,7 +148,11 @@ export default function MaintenanceClient() {
             // Validate with Zod before sending (Client-side check)
             // const validated = maintenanceSchema.parse(payload); // Optional: add rigorous client validation
 
-            await saveMaintenanceRecord(payload, currentUser.uid);
+            if (selectedRecordId) {
+                await updateMaintenanceRecord(selectedRecordId, payload, currentUser.uid);
+            } else {
+                await saveMaintenanceRecord(payload, currentUser.uid);
+            }
 
             // Refresh
             const updatedHistory = await getMaintenanceHistory(truck.id);
@@ -156,15 +175,43 @@ export default function MaintenanceClient() {
     };
 
     const resetForm = () => {
+        setSelectedRecordId(null);
         setType("PM");
         setStatus("in_progress");
         setServiceType("");
         setCustomServiceType("");
         setCostLabor("");
         setCostParts("");
+        setCostParts("");
         setSelectedFile(null);
+        setPaymentMethod("cash");
         setNotes("");
+        // Re-init mileage from truck current/next
+        if (truck) {
+            setCurrentMileage(truck.currentMileage?.toString() || "");
+        }
     }
+
+    const handleEdit = (record: MaintenanceData) => {
+        setSelectedRecordId(record.id);
+        setType(record.type);
+        setStatus(record.status);
+        if (record.type === 'PM') {
+            setServiceType(record.serviceType);
+        } else {
+            setCustomServiceType(record.serviceType);
+        }
+        setStartDate(record.startDate);
+        setEndDate(record.endDate || "");
+        setCostLabor(record.costLabor?.toString() || "");
+        setCostParts(record.costParts?.toString() || "");
+        setCurrentMileage(record.currentMileage?.toString() || "");
+        setNextServiceMileage(record.nextServiceMileage?.toString() || "");
+        setProvider(record.provider || "");
+        setPaymentMethod(record.paymentMethod || "cash");
+        setNotes(record.notes || "");
+        setView("form");
+    };
 
     if (loading) return <div className="flex h-screen justify-center items-center"><Loader2 className="animate-spin" /></div>;
     if (!truck) return <div>Truck not found</div>;
@@ -195,13 +242,41 @@ export default function MaintenanceClient() {
 
             {view === "list" ? (
                 <div className="space-y-6">
-                    <MaintenanceHistoryList history={history} onNewClick={() => setView("form")} />
+                    {/* Cost Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Card className="border-l-4 border-l-blue-500 bg-blue-50/10">
+                            <CardContent className="p-4 pt-4">
+                                <div className="flex justify-between items-center">
+                                    <h3 className="text-sm font-medium text-blue-600 mb-1">{t("Preventive Cost")}</h3>
+                                    <History className="h-4 w-4 text-blue-500" />
+                                </div>
+                                <div className="text-2xl font-bold text-blue-700">฿{totalPMCost.toLocaleString()}</div>
+                                <p className="text-xs text-muted-foreground mt-1">Total spend on scheduled maintenance</p>
+                            </CardContent>
+                        </Card>
+                        <Card className="border-l-4 border-l-red-500 bg-red-50/10">
+                            <CardContent className="p-4 pt-4">
+                                <div className="flex justify-between items-center">
+                                    <h3 className="text-sm font-medium text-red-600 mb-1">{t("Corrective Cost")}</h3>
+                                    <AlertTriangle className="h-4 w-4 text-red-500" />
+                                </div>
+                                <div className="text-2xl font-bold text-red-700">฿{totalCMCost.toLocaleString()}</div>
+                                <p className="text-xs text-muted-foreground mt-1">Total spend on repairs & fixes</p>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    <MaintenanceHistoryList
+                        history={history}
+                        onNewClick={() => { resetForm(); setView("form"); }}
+                        onEditClick={handleEdit}
+                    />
                 </div>
             ) : (
                 <Card className="border-t-4 border-t-blue-500 shadow-md">
                     <CardHeader>
-                        <CardTitle>{t("New Maintenance Record")}</CardTitle>
-                        <CardDescription>{t("Record a new service or repair job")}</CardDescription>
+                        <CardTitle>{selectedRecordId ? t("Edit Maintenance Record") : t("New Maintenance Record")}</CardTitle>
+                        <CardDescription>{selectedRecordId ? t("Update existing service details") : t("Record a new service or repair job")}</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSave} className="space-y-8">
@@ -211,10 +286,9 @@ export default function MaintenanceClient() {
                                 <Label className="text-base">{t("Maintenance Type")}</Label>
                                 <div className="flex gap-4">
                                     <div
-                                        onClick={() => setType("PM")}
-                                        className={`flex items-center space-x-2 border p-3 rounded-lg flex-1 cursor-pointer transition-colors ${type === 'PM' ? 'border-blue-500 bg-blue-500/10 ring-1 ring-blue-500' : 'hover:bg-muted/50'}`}
-                                    >
-                                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${type === 'PM' ? 'border-blue-600' : 'border-muted-foreground'}`}>
+                                        onClick={() => !selectedRecordId && setType("PM")}
+                                        className={`flex items-center space-x-2 border p-3 rounded-lg flex-1 transition-colors ${type === 'PM' ? 'border-blue-500 bg-blue-500/10 ring-1 ring-blue-500' : 'hover:bg-muted/50'} ${selectedRecordId ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}
+                                    >                                   <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${type === 'PM' ? 'border-blue-600' : 'border-muted-foreground'}`}>
                                             {type === 'PM' && <div className="w-2 h-2 rounded-full bg-blue-600" />}
                                         </div>
                                         <div className="flex-1">
@@ -223,10 +297,9 @@ export default function MaintenanceClient() {
                                         </div>
                                     </div>
                                     <div
-                                        onClick={() => setType("CM")}
-                                        className={`flex items-center space-x-2 border p-3 rounded-lg flex-1 cursor-pointer transition-colors ${type === 'CM' ? 'border-red-500 bg-red-500/10 ring-1 ring-red-500' : 'hover:bg-muted/50'}`}
-                                    >
-                                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${type === 'CM' ? 'border-red-600' : 'border-muted-foreground'}`}>
+                                        onClick={() => !selectedRecordId && setType("CM")}
+                                        className={`flex items-center space-x-2 border p-3 rounded-lg flex-1 transition-colors ${type === 'CM' ? 'border-red-500 bg-red-500/10 ring-1 ring-red-500' : 'hover:bg-muted/50'} ${selectedRecordId ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}
+                                    >                                   <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${type === 'CM' ? 'border-red-600' : 'border-muted-foreground'}`}>
                                             {type === 'CM' && <div className="w-2 h-2 rounded-full bg-red-600" />}
                                         </div>
                                         <div className="flex-1">
@@ -264,6 +337,23 @@ export default function MaintenanceClient() {
                                         onChange={e => setProvider(e.target.value)}
                                     />
                                 </div>
+                            </div>
+
+                            {/* Payment Method */}
+                            <div className="space-y-2">
+                                <Label>{t("Payment Method")}</Label>
+                                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select Payment Method" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="cash">Cash</SelectItem>
+                                        <SelectItem value="credit_card">Credit Card</SelectItem>
+                                        <SelectItem value="billing">Billing / Invoice</SelectItem>
+                                        <SelectItem value="transfer">Bank Transfer</SelectItem>
+                                        <SelectItem value="insurance_claim">Insurance Claim</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             {/* Status & Dates */}
@@ -363,6 +453,23 @@ export default function MaintenanceClient() {
 
                             <div className="flex justify-end gap-2 pt-4 border-t">
                                 <Button type="button" variant="ghost" onClick={() => setView("list")}>{t("Cancel")}</Button>
+                                {status !== 'completed' && (
+                                    <Button
+                                        type="button"
+                                        className="bg-green-600 hover:bg-green-700 text-white gap-2"
+                                        disabled={isSubmitting}
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            setStatus('completed');
+                                            const form = e.currentTarget.closest('form');
+                                            setTimeout(() => {
+                                                if (form) form.requestSubmit();
+                                            }, 0);
+                                        }}
+                                    >
+                                        <CheckCircle2 className="w-4 h-4" /> {t("Complete Maintenance")}
+                                    </Button>
+                                )}
                                 <Button type="submit" disabled={isSubmitting}>{isSubmitting ? <Loader2 className="animate-spin" /> : t("Save Record")}</Button>
                             </div>
                         </form>
@@ -373,7 +480,7 @@ export default function MaintenanceClient() {
     );
 }
 
-function MaintenanceHistoryList({ history, onNewClick }: { history: MaintenanceData[], onNewClick: () => void }) {
+function MaintenanceHistoryList({ history, onNewClick, onEditClick }: { history: MaintenanceData[], onNewClick: () => void, onEditClick: (record: MaintenanceData) => void }) {
     const { t } = useLanguage();
     if (history.length === 0) {
         return (
@@ -395,8 +502,11 @@ function MaintenanceHistoryList({ history, onNewClick }: { history: MaintenanceD
             <CardContent>
                 <div className="space-y-4">
                     {history.map((record) => (
-                        <div key={record.id} className="flex items-start justify-between p-4 border rounded-lg hover:bg-muted/30 transition-colors">
-                            <div className="flex gap-4">
+                        <div
+                            key={record.id}
+                            className="flex items-start justify-between p-4 border rounded-lg hover:bg-muted/30 transition-colors group relative"
+                        >
+                            <div className="flex gap-4 cursor-pointer flex-1" onClick={() => onEditClick(record)}>
                                 <div className={`p-3 rounded-full ${record.type === 'PM' ? 'bg-blue-100 text-blue-600' : 'bg-red-100 text-red-600'}`}>
                                     {record.type === 'PM' ? <History className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
                                 </div>
@@ -409,10 +519,27 @@ function MaintenanceHistoryList({ history, onNewClick }: { history: MaintenanceD
                                     {record.notes && <p className="text-sm italic text-muted-foreground mt-1">"{record.notes}"</p>}
                                 </div>
                             </div>
-                            <div className="text-right">
-                                <p className="font-bold text-lg">฿{record.totalCost?.toLocaleString() || "0"}</p>
-                                <p className="text-xs text-muted-foreground">Labor: {record.costLabor || 0} | Parts: {record.costParts || 0}</p>
-                                <p className="text-xs mt-1 text-muted-foreground">{record.currentMileage?.toLocaleString()} km</p>
+                            <div className="flex items-center gap-4">
+                                <div className="text-right">
+                                    <p className="font-bold text-lg">฿{record.totalCost?.toLocaleString() || "0"}</p>
+                                    <p className="text-xs text-muted-foreground">Labor: {record.costLabor || 0} | Parts: {record.costParts || 0}</p>
+                                    <p className="text-xs mt-1 text-muted-foreground">{record.currentMileage?.toLocaleString()} km</p>
+                                </div>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                                            <span className="sr-only">Open menu</span>
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                        <DropdownMenuItem onClick={() => onEditClick(record)} className="cursor-pointer">
+                                            <Pencil className="mr-2 h-4 w-4" />
+                                            Edit Update
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </div>
                         </div>
                     ))}

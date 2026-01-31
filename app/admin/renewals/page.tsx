@@ -259,6 +259,9 @@ export default function RenewalsPage() {
 }
 
 function StatusBadge({ status, label }: { status: string, label: string }) {
+    if (status === "in_progress") {
+        return <Badge variant="secondary" className="w-fit text-[10px] h-5 px-1.5 bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200">IN PROGRESS</Badge>
+    }
     if (status === "overdue") {
         return <Badge variant="destructive" className="w-fit text-[10px] h-5 px-1.5 bg-red-100 text-red-700 hover:bg-red-100 border-red-200">OVERDUE</Badge>
     }

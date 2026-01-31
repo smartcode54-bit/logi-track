@@ -87,7 +87,7 @@ export function RegistrationSection() {
                             <FormItem>
                                 <FormLabel>{t("Responsible Person (Tax)")}</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="e.g. Admin Name" {...field} />
+                                    <Input placeholder="e.g. Admin Name" {...field} value={field.value ?? ""} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
