@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { format } from "date-fns";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2, Check, ChevronsUpDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -39,11 +39,19 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command";
 
 import { cn } from "@/lib/utils";
 import { firstMileTaskSchema, FirstMileTask, SOC_KEYS, SOC_DESTINATIONS } from "@/validate/firstMileTaskSchema";
 import { Driver } from "@/validate/driverSchema";
-import { collection, addDoc, doc, updateDoc, getDocs } from "firebase/firestore";
+import { collection, addDoc, doc, updateDoc, getDocs, query, where, getCountFromServer } from "firebase/firestore";
 import { db } from "@/firebase/client";
 
 interface ItemDialogProps {
@@ -72,9 +80,9 @@ export function FirstMileTaskDialog({ mode, task, trigger, open, onOpenChange, o
             date: new Date(),
             time: "15:00",
             sourceHub: "",
-            destination: "SOC-E" as const,
-            plateType: "4WH" as const,
-            shipmentId: "",
+            destination: undefined as any, // Force selection
+            truckType: undefined as any, // Force selection
+            FirstMileTaskId: "",
             driverId: "",
             driverName: "",
             driverPhone: "",
@@ -124,9 +132,9 @@ export function FirstMileTaskDialog({ mode, task, trigger, open, onOpenChange, o
                     date: new Date(),
                     time: "15:00",
                     sourceHub: "",
-                    destination: "SOC-E",
-                    plateType: "4WH",
-                    shipmentId: "",
+                    destination: undefined as any, // Force selection
+                    truckType: undefined as any, // Force selection
+                    FirstMileTaskId: "",
                     driverName: "",
                     driverPhone: "",
                     licensePlate: "",
@@ -160,6 +168,47 @@ export function FirstMileTaskDialog({ mode, task, trigger, open, onOpenChange, o
             setLoading(false);
         }
     };
+
+    // Auto-generate ID on Date or Destination Change (Create Mode)
+    const watchedDate = form.watch("date");
+    const watchedDestination = form.watch("destination");
+
+    useEffect(() => {
+        const generateId = async () => {
+            if (mode === "create" && watchedDate && watchedDestination) {
+                try {
+                    const startOfDay = new Date(watchedDate);
+                    startOfDay.setHours(0, 0, 0, 0);
+
+                    const endOfDay = new Date(watchedDate);
+                    endOfDay.setHours(23, 59, 59, 999);
+
+                    // Running number based on Date (daily count)
+                    const qByDate = query(
+                        collection(db, "first_mile_tasks"),
+                        where("date", ">=", startOfDay),
+                        where("date", "<=", endOfDay)
+                    );
+
+                    const snapshot = await getCountFromServer(qByDate);
+                    const count = snapshot.data().count;
+                    const runningNumber = (count + 1).toString().padStart(3, '0');
+                    const dateStr = format(watchedDate, "ddMMyyyy");
+
+                    // Format: FM-[Date]-[Destination]-[RunningNumber]
+                    // Example: FM-05022026-SOC-E-001
+                    const newId = `FM-${dateStr}-${watchedDestination}-${runningNumber}`;
+
+                    form.setValue("FirstMileTaskId", newId);
+                } catch (err) {
+                    console.error("Error generating ID:", err);
+                }
+            }
+        };
+
+        const timer = setTimeout(generateId, 500);
+        return () => clearTimeout(timer);
+    }, [watchedDate, watchedDestination, mode, form]);
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -248,33 +297,74 @@ export function FirstMileTaskDialog({ mode, task, trigger, open, onOpenChange, o
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Source Hub - Fallback to simple Select */}
+                            {/* Source Hub - Combobox */}
                             <FormField
                                 control={form.control}
                                 name="sourceHub"
                                 render={({ field }) => (
-                                    <FormItem>
+                                    <FormItem className="flex flex-col">
                                         <FormLabel>Source Hub</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select Hub" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {/* Slice to prevent performance issues if list is huge */}
-                                                {hubs.slice(0, 100).map((hub, idx) => {
-                                                    const val = hub['Hub Code'] || hub['Code'];
-                                                    const name = hub['Hub Name'] || hub['station_name_en'] || val;
-                                                    if (!val) return null;
-                                                    return (
-                                                        <SelectItem key={`${val}-${idx}`} value={val}>
-                                                            {val} - {name}
-                                                        </SelectItem>
-                                                    );
-                                                })}
-                                            </SelectContent>
-                                        </Select>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <FormControl>
+                                                    <Button
+                                                        variant="outline"
+                                                        role="combobox"
+                                                        className={cn(
+                                                            "w-full justify-between",
+                                                            !field.value && "text-muted-foreground"
+                                                        )}
+                                                    >
+                                                        {field.value
+                                                            ? (() => {
+                                                                const h = hubs.find(
+                                                                    (hub) => (hub['Hub Code'] || hub['Code']) === field.value
+                                                                );
+                                                                const val = h ? (h['Hub Code'] || h['Code']) : field.value;
+                                                                const name = h ? (h['Hub Name'] || h['station_name_en'] || val) : "";
+                                                                return `${val} - ${name}`;
+                                                            })()
+                                                            : "Select hub"}
+                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                    </Button>
+                                                </FormControl>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[300px] p-0">
+                                                <Command>
+                                                    <CommandInput placeholder="Search hub..." />
+                                                    <CommandList>
+                                                        <CommandEmpty>No hub found.</CommandEmpty>
+                                                        <CommandGroup>
+                                                            {/* Slice to prevent performance issues if list is huge */}
+                                                            {hubs.slice(0, 100).map((hub, idx) => {
+                                                                const val = hub['Hub Code'] || hub['Code'];
+                                                                const name = hub['Hub Name'] || hub['station_name_en'] || val;
+                                                                if (!val) return null;
+                                                                return (
+                                                                    <CommandItem
+                                                                        value={`${val} ${name}`}
+                                                                        key={`${val}-${idx}`}
+                                                                        onSelect={() => {
+                                                                            form.setValue("sourceHub", val);
+                                                                        }}
+                                                                    >
+                                                                        <Check
+                                                                            className={cn(
+                                                                                "mr-2 h-4 w-4",
+                                                                                val === field.value
+                                                                                    ? "opacity-100"
+                                                                                    : "opacity-0"
+                                                                            )}
+                                                                        />
+                                                                        {val} - {name}
+                                                                    </CommandItem>
+                                                                );
+                                                            })}
+                                                        </CommandGroup>
+                                                    </CommandList>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -308,24 +398,24 @@ export function FirstMileTaskDialog({ mode, task, trigger, open, onOpenChange, o
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Plate Type */}
+                            {/* Truck Type */}
                             <FormField
                                 control={form.control}
-                                name="plateType"
+                                name="truckType"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Plate Type</FormLabel>
+                                        <FormLabel>Truck Type</FormLabel>
                                         <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                                             <FormControl>
                                                 <SelectTrigger>
-                                                    <SelectValue placeholder="Select Type" />
+                                                    <SelectValue placeholder="Select truck type" />
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
                                                 <SelectItem value="4WH">4WH</SelectItem>
                                                 <SelectItem value="4WJ">4WJ</SelectItem>
                                                 <SelectItem value="6WH">6WH</SelectItem>
-                                                <SelectItem value="Other">Other</SelectItem>
+                                                <SelectItem value="10WH">10WH</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />
@@ -333,15 +423,15 @@ export function FirstMileTaskDialog({ mode, task, trigger, open, onOpenChange, o
                                 )}
                             />
 
-                            {/* Shipment ID */}
+                            {/* first mile task ID */}
                             <FormField
                                 control={form.control}
-                                name="shipmentId"
+                                name="FirstMileTaskId"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Shipment ID</FormLabel>
+                                        <FormLabel>First Mile Task ID (Auto-generated)</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="e.g. 159965" {...field} />
+                                            <Input placeholder="Auto-generated" {...field} readOnly className="bg-muted" />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>

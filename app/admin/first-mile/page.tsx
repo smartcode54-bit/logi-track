@@ -244,15 +244,16 @@ export default function FirstMilePage() {
                                     <TableCell>{task.time}</TableCell>
                                     <TableCell>
                                         <span className={cn(
-                                            "px-2 py-1 rounded text-xs font-bold",
-                                            task.plateType === "4WH" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" :
-                                                task.plateType === "6WH" ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" :
-                                                    "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                                            "inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset",
+                                            task.truckType === "4WH" && "bg-blue-50 text-blue-700 ring-blue-600/20",
+                                            task.truckType === "4WJ" && "bg-cyan-50 text-cyan-700 ring-cyan-600/20",
+                                            task.truckType === "6WH" && "bg-purple-50 text-purple-700 ring-purple-600/20",
+                                            task.truckType === "10WH" && "bg-gray-50 text-gray-600 ring-gray-500/10"
                                         )}>
-                                            {task.plateType}
+                                            {task.truckType}
                                         </span>
                                     </TableCell>
-                                    <TableCell className="font-mono text-sm">{task.shipmentId}</TableCell>
+                                    <TableCell className="font-mono text-sm">{task.FirstMileTaskId}</TableCell>
                                     <TableCell className="font-mono">{task.licensePlate}</TableCell>
                                     <TableCell>{task.driverName}</TableCell>
                                     <TableCell className="text-sm text-muted-foreground">{task.driverPhone}</TableCell>

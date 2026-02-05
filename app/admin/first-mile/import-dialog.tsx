@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import * as XLSX from "xlsx";
-import { Upload, X, FileSpreadsheet, Check, AlertCircle } from "lucide-react";
+import { Upload, X, FileSpreadsheet, Check, AlertCircle, Download } from "lucide-react";
 import { format, parse } from "date-fns";
 import { collection, writeBatch, doc } from "firebase/firestore";
 import { db } from "@/firebase/client";
@@ -78,7 +78,8 @@ export function FirstMileImportDialog({ onSuccess }: ImportDialogProps) {
                 const sourceHub = getValue(['source', 'hub', 'ต้นทาง']);
                 const destination = getValue(['destination', 'soc', 'ปลายทาง']);
                 const time = getValue(['time', 'เวลา']);
-                const plateType = getValue(['type', 'plate type', 'ประเภท']);
+                const plateType = getValue(['plateType', 'plate', 'ประเภทรถ', 'Truck Type']) || "4WH";
+                const truckType = plateType; // Assign to new variable
                 const shipmentId = getValue(['shipment', 'id', 'เลขงาน']);
                 const licensePlate = getValue(['license', 'plate', 'ทะเบียน']);
                 const driverName = getValue(['driver', 'name', 'คนขับ']);
@@ -118,8 +119,8 @@ export function FirstMileImportDialog({ onSuccess }: ImportDialogProps) {
                     sourceHub,
                     destination: matchedSOC,
                     time,
-                    plateType,
-                    shipmentId,
+                    truckType,
+                    FirstMileTaskId: shipmentId,
                     licensePlate,
                     driverName,
                     driverPhone,
@@ -133,6 +134,24 @@ export function FirstMileImportDialog({ onSuccess }: ImportDialogProps) {
             console.error(err);
             setError("Failed to parse Excel file. Please check the format.");
         }
+    };
+
+    const handleDownloadTemplate = () => {
+        const headers = [
+            "Date (วัน)",
+            "Source Hub (ค้นทาง)",
+            "Destination (ปลายทาง)",
+            "Time (เวลา)",
+            "Truck Type (ประเภทรถ)",
+            "Shipment ID (เลขงาน)",
+            "License Plate (ทะเบียน)",
+            "Driver Name (คนขับ)",
+            "Driver Phone (เบอร์)"
+        ];
+        const ws = XLSX.utils.aoa_to_sheet([headers]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Template");
+        XLSX.writeFile(wb, "FirstMileTask_Template.xlsx");
     };
 
     const handleUpload = async () => {
@@ -157,8 +176,8 @@ export function FirstMileImportDialog({ onSuccess }: ImportDialogProps) {
                         sourceHub: row.sourceHub,
                         destination: row.destination, // Need to ensure it matches Enum if likely
                         time: row.time || "",
-                        plateType: row.plateType || "",
-                        shipmentId: row.shipmentId || "",
+                        truckType: row.truckType || "",
+                        FirstMileTaskId: row.FirstMileTaskId || "",
                         licensePlate: row.licensePlate || "",
                         driverName: row.driverName || "",
                         driverPhone: row.driverPhone || "",
@@ -202,20 +221,32 @@ export function FirstMileImportDialog({ onSuccess }: ImportDialogProps) {
 
                 <div className="flex-1 overflow-hidden flex flex-col gap-4">
                     {!file ? (
-                        <div
-                            className="border-2 border-dashed rounded-lg p-12 flex flex-col items-center justify-center text-muted-foreground hover:bg-muted/50 transition-colors cursor-pointer"
-                            onClick={() => fileInputRef.current?.click()}
-                        >
-                            <Upload className="h-12 w-12 mb-4 text-gray-400" />
-                            <p className="font-medium text-lg">Click to Upload Excel File</p>
-                            <p className="text-sm">.xlsx, .xls formats supported</p>
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept=".xlsx, .xls"
-                                className="hidden"
-                                onChange={handleFileChange}
-                            />
+                        <div className="flex flex-col gap-4 h-full">
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm text-muted-foreground">
+                                    Please use the template to ensure correct data format.
+                                </span>
+                                <Button variant="outline" size="sm" onClick={handleDownloadTemplate} className="gap-2">
+                                    <Download className="h-4 w-4" />
+                                    Download Template
+                                </Button>
+                            </div>
+
+                            <div
+                                className="border-2 border-dashed rounded-lg p-12 flex flex-col items-center justify-center text-muted-foreground hover:bg-muted/50 transition-colors cursor-pointer"
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                <Upload className="h-12 w-12 mb-4 text-gray-400" />
+                                <p className="font-medium text-lg">Click to Upload Excel File</p>
+                                <p className="text-sm">.xlsx, .xls formats supported</p>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept=".xlsx, .xls"
+                                    className="hidden"
+                                    onChange={handleFileChange}
+                                />
+                            </div>
                         </div>
                     ) : (
                         <div className="flex flex-col gap-4 h-full">
@@ -252,8 +283,8 @@ export function FirstMileImportDialog({ onSuccess }: ImportDialogProps) {
                                                 <TableHead>Source</TableHead>
                                                 <TableHead>Dest</TableHead>
                                                 <TableHead>Time</TableHead>
-                                                <TableHead>Plate</TableHead>
-                                                <TableHead>Shipment</TableHead>
+                                                <TableHead>Truck Type</TableHead>
+                                                <TableHead>First Mile Task ID</TableHead>
                                                 <TableHead>Driver</TableHead>
                                                 <TableHead>Status</TableHead>
                                             </TableRow>
@@ -262,7 +293,7 @@ export function FirstMileImportDialog({ onSuccess }: ImportDialogProps) {
                                             {data.map((row, idx) => (
                                                 <TableRow key={idx} className={!row.isValid ? "bg-red-50" : ""}>
                                                     <TableCell className="font-mono text-xs">{idx + 1}</TableCell>
-                                                    <TableCell>{row.date ? format(row.date, 'dd/MM/yy') : '-'}</TableCell>
+                                                    <TableCell>{row.date ? format(row.date, 'dd/MM/yyyy') : '-'}</TableCell>
                                                     <TableCell>{row.sourceHub}</TableCell>
                                                     <TableCell>
                                                         <span className={row.destination ? "text-green-600 font-medium" : "text-red-500"}>
@@ -270,8 +301,8 @@ export function FirstMileImportDialog({ onSuccess }: ImportDialogProps) {
                                                         </span>
                                                     </TableCell>
                                                     <TableCell>{row.time}</TableCell>
-                                                    <TableCell>{row.licensePlate}</TableCell>
-                                                    <TableCell className="text-xs">{row.shipmentId}</TableCell>
+                                                    <TableCell>{row.truckType}</TableCell>
+                                                    <TableCell className="text-xs">{row.FirstMileTaskId}</TableCell>
                                                     <TableCell>{row.driverName}</TableCell>
                                                     <TableCell>
                                                         {row.isValid ? (
