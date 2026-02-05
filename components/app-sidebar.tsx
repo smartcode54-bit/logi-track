@@ -13,7 +13,8 @@ import {
     User,
     HelpCircle,
     GitBranch,
-    Shield
+    Shield,
+    MapPin
 } from "lucide-react"
 
 import {
@@ -98,6 +99,17 @@ export function AppSidebar() {
             title: "Reporting",
             url: "/admin/analytics",
             icon: BarChart3,
+        },
+        {
+            title: "Day Trip Operations",
+            icon: MapPin, // Using MapPin or generic icon
+            items: [
+                {
+                    title: "First Mile Tasks",
+                    url: "/admin/first-mile",
+                },
+                // Future: Line Haul, etc.
+            ],
         },
     ]
 

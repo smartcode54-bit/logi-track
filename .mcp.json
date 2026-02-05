@@ -27,6 +27,23 @@
                 "-y",
                 "next-devtools@latest"
             ]
+        },
+        "TestSprite": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@testsprite/testsprite-mcp@latest"
+            ],
+            "env": {
+                "API_KEY": "sk-user-tjQpzw56srzhDLbGVWZCX2fqKgCmmgjJvygG9aaBSYNletqm0ikWsKRfnQIAp-SpfxyYZmoi3fxxwuk4LCqPQ6Lali42em_uXtm0RvlIEPtg_l2lZD2sALh_iXRsFjlEof4"
+            }
+        },
+        "playwright-mcp": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@playwright/mcp@latest"
+            ]
         }
     }
 }
