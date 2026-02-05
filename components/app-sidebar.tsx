@@ -101,12 +101,16 @@ export function AppSidebar() {
             icon: BarChart3,
         },
         {
-            title: "Day Trip Operations",
+            title: "Operations",
             icon: MapPin, // Using MapPin or generic icon
             items: [
                 {
                     title: "First Mile Tasks",
                     url: "/admin/first-mile",
+                },
+                {
+                    title: "Source Management",
+                    url: "/admin/sources",
                 },
                 // Future: Line Haul, etc.
             ],

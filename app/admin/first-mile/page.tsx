@@ -3,11 +3,13 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, Filter, Plus, Search, MapPin, Truck } from "lucide-react";
+import { Calendar as CalendarIcon, Plus } from "lucide-react";
 import { FirstMileImportDialog } from "./import-dialog";
+import { FirstMileTaskDialog } from "./task-dialog";
+
+
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import {
     Popover,
@@ -30,75 +32,56 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { SOC_DESTINATIONS, SOC_KEYS, FirstMileTask } from "@/validate/firstMileTaskSchema";
-
-// Mock Data for initial display (since we don't have backend data yet)
-const MOCK_TASKS: Partial<FirstMileTask>[] = [
-    {
-        id: "1",
-        date: new Date(),
-        sourceHub: "FBPLI-G", // Example from image
-        destination: "SOC-E",
-        time: "15:00",
-        plateType: "4WH",
-        shipmentId: "159965",
-        licensePlate: "3wn-1199",
-        driverName: "Saharhat",
-        driverPhone: "0902347255",
-        status: "Assigned"
-    },
-    {
-        id: "2",
-        date: new Date(),
-        sourceHub: "FBPLI-G",
-        destination: "SOC-E",
-        time: "16:00",
-        plateType: "4WH",
-        shipmentId: "166131",
-        licensePlate: "uu-2480",
-        driverName: "Chaloem",
-        driverPhone: "0925811678",
-        status: "Assigned"
-    }
-];
+import { collection, onSnapshot, query, orderBy, limit } from "firebase/firestore";
+import { db } from "@/firebase/client";
 
 export default function FirstMilePage() {
     const [date, setDate] = useState<Date | undefined>(new Date());
-    const [tasks, setTasks] = useState<Partial<FirstMileTask>[]>(MOCK_TASKS);
-    const [hubs, setHubs] = useState<any[]>([]);
+    const [tasks, setTasks] = useState<FirstMileTask[]>([]);
+    const [hubs, setHubs] = useState<Record<string, any>[]>([]);
     const [selectedHub, setSelectedHub] = useState<string>("all");
     const [selectedSOC, setSelectedSOC] = useState<string>("all");
 
+    // Dialog State
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
+    const [selectedTask, setSelectedTask] = useState<Partial<FirstMileTask> | undefined>(undefined);
+
     // Fetch Hubs
-    useEffect(() => {
-        const fetchHubs = async () => {
-            try {
-                const res = await fetch('/api/hubs');
-                if (res.ok) {
-                    const data = await res.json();
-                    setHubs(data.hubs || []);
-                }
-            } catch (err) {
-                console.error("Failed to fetch hubs", err);
+    const fetchHubs = async () => {
+        try {
+            const res = await fetch('/api/hubs');
+            if (res.ok) {
+                const data = await res.json();
+                setHubs(data.hubs || []);
             }
-        };
+        } catch (err) {
+            console.error("Failed to fetch hubs", err);
+        }
+    };
+
+    useEffect(() => {
         fetchHubs();
     }, []);
 
-    const filteredTasks = useMemo(() => {
-        return tasks.filter(task => {
-            // Date Filter (Simple string match for now)
-            if (date && task.date && format(task.date, 'yyyy-MM-dd') !== format(date, 'yyyy-MM-dd')) {
-                // return false; 
-                // Commenting out strict date filter for mock data visibility
-            }
-            if (selectedSOC !== "all" && task.destination !== selectedSOC) return false;
-            // Add Hub filter matches
-            return true;
+    // Listen to Tasks
+    useEffect(() => {
+        const q = query(collection(db, "first_mile_tasks"), orderBy("createdAt", "desc"), limit(100));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const fetched: FirstMileTask[] = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                date: doc.data().date?.toDate(), // Convert timestamp
+                createdAt: doc.data().createdAt?.toDate(),
+                updatedAt: doc.data().updatedAt?.toDate(),
+            })) as FirstMileTask[];
+            setTasks(fetched);
         });
-    }, [tasks, date, selectedSOC]);
+        return () => unsubscribe();
+    }, []);
 
     const getSOCColor = (soc: string) => {
         switch (soc) {
@@ -109,19 +92,47 @@ export default function FirstMilePage() {
         }
     };
 
+    const handleCreate = () => {
+        setDialogMode("create");
+        setSelectedTask(undefined);
+        setIsDialogOpen(true);
+    };
+
+    const handleEdit = (task: FirstMileTask) => {
+        setDialogMode("edit");
+        setSelectedTask(task);
+        setIsDialogOpen(true);
+    };
+
+    // Filter Logic
+    const filteredTasks = tasks.filter(task => {
+        // Date match (compare dd/MM/yyyy)
+        if (date) {
+            const filterStr = format(date, "dd/MM/yyyy");
+            const taskStr = task.date ? format(task.date, "dd/MM/yyyy") : "";
+            if (filterStr !== taskStr) return false;
+        }
+        // SOC
+        if (selectedSOC !== "all" && task.destination !== selectedSOC) return false;
+        // Hub
+        if (selectedHub !== "all" && task.sourceHub !== selectedHub) return false;
+
+        return true;
+    });
+
     return (
-        <div className="container mx-auto p-6 space-y-6 max-w-[1600px]">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex-1 space-y-4 p-8 pt-6">
+            <div className="flex items-center justify-between space-y-2">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">First Mile Tasks</h1>
-                    <p className="text-muted-foreground mt-1">
+                    <h2 className="text-3xl font-bold tracking-tight">First Mile Tasks</h2>
+                    <p className="text-muted-foreground">
                         Assign drivers to pick up from Hubs and deliver to SOCs (First Step of Day Trip).
                     </p>
                 </div>
                 <div className="flex gap-3">
                     <div className="flex gap-3">
-                        <FirstMileImportDialog onSuccess={() => window.location.reload()} />
-                        <Button>
+                        <FirstMileImportDialog onSuccess={() => { }} />
+                        <Button onClick={handleCreate}>
                             <Plus className="mr-2 h-4 w-4" />
                             New Assignment
                         </Button>
@@ -147,7 +158,7 @@ export default function FirstMilePage() {
                                     )}
                                 >
                                     <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {date ? format(date, "PPP") : <span>Pick a date</span>}
+                                    {date ? format(date, "dd/MM/yyyy") : <span>Pick a date</span>}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
@@ -214,38 +225,60 @@ export default function FirstMilePage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {filteredTasks.map((task) => (
-                            <TableRow key={task.id} className="hover:bg-muted/50">
-                                <TableCell>{task.date ? format(task.date, 'dd-MMM-yyyy') : '-'}</TableCell>
-                                <TableCell className="font-medium">{task.sourceHub}</TableCell>
-                                <TableCell>
-                                    <Badge className={cn("font-normal border-0", getSOCColor(task.destination || ""))}>
-                                        {task.destination ? SOC_DESTINATIONS[task.destination as keyof typeof SOC_DESTINATIONS] : task.destination}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell>{task.time}</TableCell>
-                                <TableCell>
-                                    <span className={cn(
-                                        "px-2 py-1 rounded text-xs font-bold",
-                                        task.plateType === "4WH" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" :
-                                            task.plateType === "6WH" ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" :
-                                                "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
-                                    )}>
-                                        {task.plateType}
-                                    </span>
-                                </TableCell>
-                                <TableCell className="font-mono text-sm">{task.shipmentId}</TableCell>
-                                <TableCell className="font-mono">{task.licensePlate}</TableCell>
-                                <TableCell>{task.driverName}</TableCell>
-                                <TableCell className="text-sm text-muted-foreground">{task.driverPhone}</TableCell>
-                                <TableCell className="text-right">
-                                    <Button variant="ghost" size="sm">Edit</Button>
+                        {filteredTasks.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={10} className="h-24 text-center">
+                                    No tasks found. Create one or import from Excel.
                                 </TableCell>
                             </TableRow>
-                        ))}
+                        ) : (
+                            filteredTasks.map((task) => (
+                                <TableRow key={task.id} className="hover:bg-muted/50">
+                                    <TableCell>{task.date ? format(task.date, 'dd/MM/yyyy') : '-'}</TableCell>
+                                    <TableCell className="font-medium">{task.sourceHub}</TableCell>
+                                    <TableCell>
+                                        <Badge className={cn("font-normal border-0", getSOCColor(task.destination || ""))}>
+                                            {task.destination ? SOC_DESTINATIONS[task.destination as keyof typeof SOC_DESTINATIONS] : task.destination}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell>{task.time}</TableCell>
+                                    <TableCell>
+                                        <span className={cn(
+                                            "px-2 py-1 rounded text-xs font-bold",
+                                            task.plateType === "4WH" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" :
+                                                task.plateType === "6WH" ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" :
+                                                    "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                                        )}>
+                                            {task.plateType}
+                                        </span>
+                                    </TableCell>
+                                    <TableCell className="font-mono text-sm">{task.shipmentId}</TableCell>
+                                    <TableCell className="font-mono">{task.licensePlate}</TableCell>
+                                    <TableCell>{task.driverName}</TableCell>
+                                    <TableCell className="text-sm text-muted-foreground">{task.driverPhone}</TableCell>
+                                    <TableCell className="text-right">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleEdit(task)}
+                                        >
+                                            Edit
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
                     </TableBody>
                 </Table>
             </div>
+
+            <FirstMileTaskDialog
+                open={isDialogOpen}
+                onOpenChange={setIsDialogOpen}
+                mode={dialogMode}
+                task={selectedTask}
+                onSuccess={() => { }} // Could show toast
+            />
         </div>
     );
 }

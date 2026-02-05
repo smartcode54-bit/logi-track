@@ -1,28 +1,34 @@
 import { NextResponse } from 'next/server';
-import * as XLSX from 'xlsx';
-import * as path from 'path';
-import * as fs from 'fs';
+import { db } from "@/firebase/client";
+import { collection, getDocs } from "firebase/firestore";
+
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
     try {
-        const filePath = path.join(process.cwd(), 'shopee data', 'SPX_Hub.xlsx');
-
-        if (!fs.existsSync(filePath)) {
-            return NextResponse.json({ error: 'Hub data file not found' }, { status: 404 });
+        let hubs: any[] = [];
+        try {
+            const querySnapshot = await getDocs(collection(db, "hubs"));
+            hubs = querySnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    'Hub Code': data.hubId || data.hubCode, // Prefer hubId, fallback to code
+                    'Hub Name': data.hubName,
+                    'Hub Name TH': data.hubTHName,
+                    lat: data.lat,
+                    lng: data.lng,
+                    source: 'custom',
+                    id: doc.id
+                };
+            });
+        } catch (dbError) {
+            console.error("Firestore fetch error:", dbError);
+            return NextResponse.json({ error: 'Failed to fetch hubs from database' }, { status: 500 });
         }
 
-        const workbook = XLSX.readFile(filePath);
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        const data = XLSX.utils.sheet_to_json(sheet);
-
-        // Map data to a cleaner format if possible, otherwise return generic list
-        // Assuming headers like "Hub Code", "Hub Name" based on common formats
-        // We'll return the raw list and let the client filter
-
-        return NextResponse.json({ hubs: data });
+        return NextResponse.json({ hubs });
     } catch (error) {
         console.error('Error reading hub data:', error);
-        return NextResponse.json({ error: 'Failed to read hub data' }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
